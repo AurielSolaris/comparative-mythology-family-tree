@@ -6,6 +6,7 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title>@hasSection('title')@yield('title') · @endif{{ config('app.name') }}</title>
+        <x-favicons />
 
         @fonts('instrument-sans')
 

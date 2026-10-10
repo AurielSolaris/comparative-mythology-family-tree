@@ -45,6 +45,10 @@
         <meta name="description" content="An interactive family tree of gods, cross-referenced across pantheons, with open data exports.">
 
         <title>{{ config('app.name') }}</title>
+        <x-favicons />
+        <meta property="og:title" content="{{ config('app.name') }}">
+        <meta property="og:description" content="An interactive family tree of gods, cross-referenced across pantheons, with open data exports.">
+        <meta property="og:image" content="{{ asset('icon-512.png') }}">
 
         @fonts(['lora', 'inter', 'press-start-2p'])
 
@@ -55,7 +59,7 @@
             <div class="uk-container landing-container">
                 <nav class="uk-navbar-container uk-navbar-transparent" uk-navbar>
                     <div class="uk-navbar-left">
-                        <a class="uk-navbar-item uk-logo landing-logo" href="{{ route('home') }}" aria-label="{{ config('app.name') }}">CMFT</a>
+                        <a class="uk-navbar-item uk-logo landing-logo" href="{{ route('home') }}" aria-label="{{ config('app.name') }}"><img class="app-logo" src="{{ asset('favicon.svg') }}" width="32" height="32" alt=""> CMFT</a>
                         <ul class="uk-navbar-nav uk-visible@m">
                             <li><a href="{{ route('explore') }}">Explore</a></li>
                             <li><a href="#religions">Religions</a></li>

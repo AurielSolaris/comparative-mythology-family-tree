@@ -66,6 +66,11 @@ Anyone can download the whole dataset: visitors from the explorer's left panel, 
 - **Relations:** *parent/child*, *consort*, *sibling*, *equivalent* and *member of council/court*. Each relation can have an optional tradition and a note. Duplicates, self-links and contradictory links are rejected.
 - **Drag-to-reorder** the entity list. This order is also the starting left-to-right order of siblings on the canvas.
 - **Switch sides (⇄).** While logged in as an admin, each consort or sibling pair on the canvas has a ⇄ button that swaps which one is drawn on the left.
+- **Sources.** Cite where the data comes from, on entities and on relations:
+  - An entity's sources are listed on its edit page, with a form to add a **link** (an `http(s)` URL) or an uploaded **file**, plus an optional **reference** for the line, verse or page (e.g. *KTU 1.2 IV 11–12*).
+  - Each relation on that page links to its own sources page ("2 sources" / "Add sources").
+  - Sources can be edited (a link's URL and reference; a file's reference, or a replacement upload) and removed. Removing or replacing a file deletes the stored file.
+  - Uploads are documents or images (pdf, txt, md, doc, docx, odt, rtf, epub, png, jpg, webp, gif) of up to 20 MB, or less if PHP's `upload_max_filesize` / `post_max_size` are lower; the form shows the limit that applies. Files are kept on the private disk and only admins can download them.
 
 There is no public registration. Only admins can log in, and only they can change data.
 
@@ -123,7 +128,7 @@ Or use the scripts in the project root, which also set up anything missing on fi
 | http://localhost:8000 | The app: the explorer, plus `/login` and `/admin` |
 | http://localhost:5173 | Vite's asset server. It only serves scripts and styles; open the app on port 8000. |
 
-A good order for entering data: religions first, then entities, then relations (from each entity's edit page).
+A good order for entering data: religions first, then entities, then relations and sources (from each entity's edit page).
 
 ## Project layout
 
@@ -138,7 +143,11 @@ app/
 resources/
   js/explorer/      Canvas tree: layout.ts, renderer.ts, elements.ts (pixel icons), explorer.ts (Alpine)
   js/admin/         Entity picker, sortable rows, confirmation dialogs
-  views/            explorer.blade.php, admin/*, auth/login
+  views/            explorer.blade.php, admin/* (including admin/sources), auth/login
+public/
+  favicon.svg       The logo: a pixel-art SVG on a 16-unit grid (the master for every icon)
+  favicon.ico, apple-touch-icon.png, icon-192.png, icon-512.png, site.webmanifest
+                    The logo rasterized for browsers, home screens and link previews
 docker/             Apache, PHP and entrypoint config for the container image
 ```
 
@@ -152,7 +161,7 @@ docker/             Apache, PHP and entrypoint config for the container image
 - **EntityRelation:** two entities, a kind, an optional tradition and an optional note.
   - *parent* and *council* are directional: `entity_id` is the parent, or the head of the council.
   - *consort*, *sibling* and *equivalent* are symmetric and stored once, with the lower id first. `sides_swapped` records the admin's chosen left/right order.
-- **Source:** a citation on an entity or a relation (polymorphic `sourceable`, stored as `entity` / `entity_relation`). It has a `kind` (`file` or `link`), a `url` or a stored `path` (with the uploaded `original_name`), and a `ref` for the line or verse. Files live on the private `local` disk under `sources/` and are deleted with their source. Deleting an entity also deletes its relations' sources. There is no admin screen for sources yet.
+- **Source:** a citation on an entity or a relation (polymorphic `sourceable`, stored as `entity` / `entity_relation`). It has a `kind` (`file` or `link`), a `url` or a stored `path` (with the uploaded `original_name`), and a `ref` for the line or verse. Files live on the private `local` disk under `sources/` and are deleted with their source. Deleting an entity also deletes its relations' sources.
 
 ### Graph endpoints (used by the canvas)
 
@@ -193,7 +202,8 @@ docker compose exec app php artisan app:create-admin
 The app is then available at http://localhost:8080.
 
 - **Image.** A multi-stage build: Bun builds the assets, and the app runs on PHP 8.5 with Apache.
-- **Persistent data.** The SQLite database and the CitronDB cache live on named volumes.
+- **Persistent data.** The SQLite database, uploaded source files and the CitronDB cache live on named volumes.
+- **Uploads.** The image's PHP settings allow uploads of up to 24 MB, enough for the 20 MB source limit.
 - **Startup.** Migrations run automatically when the container starts.
 - **HTTPS.** If the container runs behind a reverse proxy that handles HTTPS, configure Laravel's trusted proxies.
 

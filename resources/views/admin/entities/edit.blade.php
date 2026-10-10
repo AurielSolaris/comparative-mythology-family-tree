@@ -37,6 +37,19 @@
                     </form>
                 </div>
             </div>
+
+            <div class="uk-card uk-card-default uk-margin-top" id="sources">
+                <div class="uk-card-header">
+                    <h2 class="uk-card-title">Sources</h2>
+                </div>
+                <div class="uk-card-body">
+                    @include('admin.sources._list', ['sources' => $entity->sources])
+                </div>
+                <div class="uk-card-footer">
+                    <h3 class="uk-h5 uk-margin-small-top">Add a source</h3>
+                    @include('admin.sources._create', ['action' => route('admin.entities.sources.store', $entity)])
+                </div>
+            </div>
         </div>
 
         <div class="uk-width-2-5@m">
@@ -67,6 +80,10 @@
                                                     {{ $relative['relation']->note }}
                                                 </div>
                                             @endif
+                                            <a class="uk-text-small" href="{{ route('admin.relations.sources', $relative['relation']) }}">
+                                                <span uk-icon="icon: link; ratio: 0.7"></span>
+                                                {{ trans_choice('{0} Add sources|{1} 1 source|[2,*] :count sources', $relative['relation']->sources_count) }}
+                                            </a>
                                         </div>
                                         <div class="uk-width-auto">
                                             <form method="POST" action="{{ route('admin.relations.destroy', $relative['relation']) }}"

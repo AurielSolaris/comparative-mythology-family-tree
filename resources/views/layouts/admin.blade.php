@@ -16,6 +16,7 @@
             <nav class="uk-navbar-container uk-navbar-transparent" uk-navbar>
                 <div class="uk-navbar-left">
                     <a class="uk-navbar-item uk-logo" href="{{ route('admin.dashboard') }}">
+                        <img class="app-logo uk-margin-small-right" src="{{ asset('favicon.svg') }}" width="32" height="32" alt="">
                         {{ config('app.name') }}
                     </a>
                     <ul class="uk-navbar-nav uk-visible@m">

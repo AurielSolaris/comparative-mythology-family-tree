@@ -98,6 +98,11 @@
     color: var(--fg);
 }
 
+.landing .app-logo {
+    image-rendering: pixelated;
+    margin-right: 10px;
+}
+
 .landing .landing-logo {
     min-height: 64px;
     color: var(--fg);

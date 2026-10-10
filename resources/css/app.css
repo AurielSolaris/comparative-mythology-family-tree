@@ -46,6 +46,21 @@ html {
     vertical-align: middle;
 }
 
+/* The pixel logo (public/favicon.svg), kept crisp at any size. */
+.app-logo {
+    image-rendering: pixelated;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+.explorer-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.3rem;
+    line-height: 1.25;
+}
+
 /* Zoom, fit, undo-drag and PNG buttons: compact so the row fits beside "Legend". */
 .explorer-view-controls {
     display: flex;

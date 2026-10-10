@@ -29,7 +29,7 @@
              column so a short window shrinks the search card instead of overlapping. --}}
         <div class="explorer-sidebar uk-position-z-index">
             <div class="uk-card uk-card-default uk-card-small uk-card-body explorer-sidebar-search">
-                <a class="uk-logo uk-text-primary" href="{{ route('home') }}">{{ config('app.name') }}</a>
+                <a class="uk-logo uk-text-primary explorer-logo" href="{{ route('home') }}"><img class="app-logo" src="{{ asset('favicon.svg') }}" width="40" height="40" alt=""><span>{{ config('app.name') }}</span></a>
 
                 <div class="uk-margin-small-top uk-inline uk-width-1-1" @click.outside="suggestionsOpen = false">
                     <span class="uk-form-icon" uk-icon="search"></span>

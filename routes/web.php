@@ -45,4 +45,10 @@ Route::middleware(['auth', 'can:access-admin'])->prefix('admin')->name('admin.')
     Route::resource('entities', Admin\EntityController::class)->except('show');
     Route::resource('entities.relations', Admin\EntityRelationController::class)->shallow()->only(['store', 'destroy']);
     Route::patch('relations/{relation}/sides', [Admin\EntityRelationController::class, 'swapSides'])->name('relations.sides');
+
+    Route::post('entities/{entity}/sources', [Admin\SourceController::class, 'storeForEntity'])->name('entities.sources.store');
+    Route::get('relations/{relation}/sources', [Admin\SourceController::class, 'relation'])->name('relations.sources');
+    Route::post('relations/{relation}/sources', [Admin\SourceController::class, 'storeForRelation'])->name('relations.sources.store');
+    Route::get('sources/{source}/file', [Admin\SourceController::class, 'file'])->name('sources.file');
+    Route::resource('sources', Admin\SourceController::class)->only(['edit', 'update', 'destroy']);
 });

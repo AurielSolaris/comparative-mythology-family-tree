@@ -71,8 +71,12 @@ class EntityController extends Controller
 
     public function edit(Entity $entity): View
     {
+        $entity->loadRelatives()->load(['additionalReligions', 'syncreticOrigin.religion', 'sources']);
+        $entity->outgoingRelations->loadCount('sources');
+        $entity->incomingRelations->loadCount('sources');
+
         return view('admin.entities.edit', [
-            'entity' => $entity->loadRelatives()->load(['additionalReligions', 'syncreticOrigin.religion']),
+            'entity' => $entity,
             'roles' => RelationRole::cases(),
             ...$this->formOptions(),
         ]);
