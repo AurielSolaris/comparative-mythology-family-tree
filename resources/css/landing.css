@@ -1,0 +1,409 @@
+@import 'uikit/dist/css/uikit.min.css';
+
+/* Landing page: UIkit layout, themed as parchment with pixel sprites. */
+
+:root {
+    --bg: #F5F0E8;
+    --bg-card: #EDE8DC;
+    --fg: #2C1F0E;
+    --fg-muted: #7A6A52;
+    --accent: #4A7C9E;
+    --accent-strong: #3B6886;
+    --accent-warm: #C17F3B;
+    --border: #D4C9B0;
+    --on-accent: #FFFFFF;
+
+    --px-gold: #C17F3B;
+    --px-sand: #E2B76A;
+    --px-blue: #4A7C9E;
+    --px-sky: #8FB4CC;
+    --px-brown: #6B4A2A;
+    --px-ink: #2C1F0E;
+
+    --font-display: 'Lora', Georgia, serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-pixel: 'Press Start 2P', monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #1A1209;
+        --bg-card: #241A0F;
+        --fg: #F0E8D8;
+        --fg-muted: #B3A285;
+        --accent: #7FAFD0;
+        --accent-strong: #9CC3DD;
+        --accent-warm: #E0A563;
+        --border: #3E3020;
+        --on-accent: #1A1209;
+
+        --px-gold: #E0A563;
+        --px-sand: #F0CB86;
+        --px-blue: #7FAFD0;
+        --px-sky: #B6D2E4;
+        --px-brown: #A9774A;
+        --px-ink: #1A1209;
+    }
+}
+
+.landing {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.landing h1,
+.landing h2,
+.landing h3 {
+    color: var(--fg);
+    font-family: var(--font-display);
+}
+
+.landing a {
+    color: var(--accent);
+}
+
+.landing a:hover {
+    color: var(--accent-warm);
+}
+
+.landing p {
+    max-width: 65ch;
+}
+
+.landing-container {
+    max-width: 1100px;
+}
+
+/* Navigation */
+
+.landing-header {
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+}
+
+.landing .uk-navbar-nav > li > a,
+.landing .landing-icon-link {
+    min-height: 64px;
+    color: var(--fg-muted);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    text-transform: none;
+}
+
+.landing .uk-navbar-nav > li > a:hover,
+.landing .landing-icon-link:hover {
+    color: var(--fg);
+}
+
+.landing .landing-logo {
+    min-height: 64px;
+    color: var(--fg);
+    font-family: var(--font-pixel);
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+}
+
+/* Buttons: square-ish, like the sprites. */
+
+.landing .uk-button {
+    border-radius: 2px;
+    font-family: var(--font-body);
+    font-weight: 500;
+    text-transform: none;
+}
+
+.landing .uk-button-primary {
+    background: var(--accent);
+    color: var(--on-accent);
+}
+
+.landing .uk-button-primary:hover {
+    background: var(--accent-strong);
+    color: var(--on-accent);
+}
+
+.landing .uk-button-default {
+    border-color: var(--border);
+    background: transparent;
+    color: var(--fg);
+}
+
+.landing .uk-button-default:hover {
+    border-color: var(--accent-warm);
+    color: var(--accent-warm);
+}
+
+.landing-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 28px;
+}
+
+/* Type */
+
+.landing-label {
+    margin-bottom: 12px;
+    color: var(--accent-warm);
+    font-family: var(--font-pixel);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.landing-hero-title {
+    margin: 0;
+    font-size: clamp(40px, 7vw, 68px);
+    font-weight: 700;
+    line-height: 1.05;
+    animation: landing-fade-up 0.4s ease-out both;
+}
+
+.landing-lead {
+    margin-top: 24px;
+    color: var(--fg-muted);
+    font-size: 1.15rem;
+}
+
+.landing-heading {
+    font-size: 36px;
+    line-height: 1.2;
+}
+
+.landing-subheading {
+    margin-top: 0;
+    font-size: 22px;
+}
+
+.landing-caption {
+    color: var(--fg-muted);
+    font-size: 0.85rem;
+}
+
+/* Sections */
+
+.landing-hero {
+    padding: 72px 0 56px;
+}
+
+.landing-section {
+    padding: 72px 0;
+    border-top: 1px solid var(--border);
+}
+
+.landing-band {
+    background: var(--bg-card);
+}
+
+.landing-row {
+    margin-top: 56px;
+}
+
+.landing-card {
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--fg);
+}
+
+.landing-card-sprite {
+    display: flex;
+    align-items: flex-end;
+    height: 56px;
+}
+
+.landing-card-title {
+    margin: 20px 0 8px;
+    font-size: 22px;
+}
+
+.landing-card p {
+    margin: 0;
+    color: var(--fg-muted);
+}
+
+/* Sprites */
+
+.landing-sprite {
+    display: block;
+    image-rendering: pixelated;
+}
+
+.landing-hero-sprites {
+    position: relative;
+    height: 280px;
+}
+
+.landing-sprite-bull {
+    position: absolute;
+    top: 40px;
+    left: 22%;
+}
+
+.landing-sprite-moon {
+    position: absolute;
+    top: 0;
+    right: 8%;
+}
+
+.landing-sprite-bolt {
+    position: absolute;
+    bottom: 10px;
+    right: 26%;
+}
+
+.landing-bob {
+    animation: landing-bob 3.5s ease-in-out infinite;
+}
+
+.landing-bob-late {
+    animation-delay: -1.75s;
+}
+
+/* Screenshots */
+
+.landing-screenshot {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 0 12px 32px -18px rgba(44, 31, 14, 0.45);
+}
+
+.landing-screenshot-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 16 / 10;
+    background: var(--bg-card);
+    color: var(--fg-muted);
+    font-family: var(--font-pixel);
+    font-size: 11px;
+}
+
+/* Data callout */
+
+.landing-code {
+    margin: 24px 0 0;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: var(--bg);
+    color: var(--fg);
+    font-size: 13px;
+    line-height: 1.55;
+    overflow-x: auto;
+}
+
+/* Religion chips */
+
+.landing-chips {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+    padding-bottom: 6px;
+    overflow-x: auto;
+}
+
+.landing-chip {
+    flex: none;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--fg);
+    font-size: 0.9rem;
+}
+
+.landing a.landing-chip {
+    color: var(--fg);
+}
+
+.landing a.landing-chip:hover {
+    border-color: var(--accent-warm);
+    text-decoration: none;
+}
+
+.landing-chip-count {
+    margin-left: 6px;
+    color: var(--fg-muted);
+    font-size: 0.8rem;
+}
+
+.landing-chip-muted {
+    border-style: dashed;
+    color: var(--fg-muted);
+}
+
+/* Tech stack */
+
+.landing-stack {
+    padding: 40px 0;
+}
+
+.landing-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 12px;
+    padding: 0;
+    list-style: none;
+}
+
+.landing-badge {
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    color: var(--fg-muted);
+    font-size: 0.8rem;
+}
+
+/* Footer */
+
+.landing-footer {
+    padding: 28px 0;
+    border-top: 1px solid var(--border);
+    color: var(--fg-muted);
+    font-size: 0.9rem;
+}
+
+.landing-footer p {
+    margin: 0;
+}
+
+.landing-footer-links {
+    display: flex;
+    gap: 20px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+@keyframes landing-fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes landing-bob {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-3px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .landing-hero-title,
+    .landing-bob {
+        animation: none;
+    }
+}

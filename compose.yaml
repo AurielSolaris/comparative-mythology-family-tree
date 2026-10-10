@@ -1,0 +1,27 @@
+services:
+  app:
+    build: .
+    image: comparative-mythology-family-tree
+    ports:
+      - "${APP_PORT:-8080}:80"
+    environment:
+      APP_NAME: "Comparative Mythology Family Tree"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY:?Set APP_KEY (php artisan key:generate --show)}
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      LOG_CHANNEL: stderr
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /data/database.sqlite
+      SESSION_DRIVER: database
+      CACHE_STORE: citron
+      CITRON_CACHE_PATH: /var/www/html/storage/framework/cache/cache.citron
+      QUEUE_CONNECTION: sync
+    volumes:
+      - storage:/var/www/html/storage
+      - data:/data
+    restart: unless-stopped
+
+volumes:
+  storage:
+  data:
