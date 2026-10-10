@@ -46,6 +46,31 @@ html {
     vertical-align: middle;
 }
 
+/* Zoom, fit, undo-drag and PNG buttons: compact so the row fits beside "Legend". */
+.explorer-view-controls {
+    display: flex;
+    gap: 4px;
+}
+
+.explorer-view-controls .uk-icon-button {
+    width: 32px;
+    height: 32px;
+}
+
+/* Pixel icons in the legend (painted from the canvas sprites). */
+.explorer-legend-icon {
+    margin-right: 6px;
+    vertical-align: middle;
+    image-rendering: pixelated;
+}
+
+.explorer-legend-elements {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin-top: 4px;
+}
+
 /* Left column of the explorer: the search card shrinks (its lower part
    scrolls) so it never runs into the legend below it. */
 .explorer-sidebar {

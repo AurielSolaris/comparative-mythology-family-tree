@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\RelationKind;
 use App\Enums\RelationRole;
+use App\Models\Concerns\HasSources;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['entity_id', 'related_entity_id', 'kind', 'religion_id', 'note'])]
 class EntityRelation extends Model
 {
+    use HasSources;
+
     /**
      * Get the attributes that should be cast.
      *

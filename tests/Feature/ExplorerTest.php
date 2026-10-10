@@ -93,6 +93,38 @@ class ExplorerTest extends TestCase
             ->assertJsonPath('data.0.gender', 'Female');
     }
 
+    public function test_nodes_include_the_element_and_suggestions_can_be_filtered_or_searched_by_it(): void
+    {
+        $this->zeus->update(['element' => 'Sky']);
+        $this->hera->update(['element' => 'Earth']);
+
+        $this->getJson(route('graph.entities', $this->zeus))->assertJsonFragment(['name' => 'Zeus', 'element' => 'Sky']);
+
+        $this->getJson(route('search.suggestions', ['q' => 'e', 'element' => 'Earth']))
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Hera')
+            ->assertJsonPath('data.0.element', 'Earth');
+
+        $this->getJson(route('search.suggestions', ['q' => 'sky']))
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Zeus');
+    }
+
+    public function test_nodes_include_their_syncretic_origin(): void
+    {
+        $this->jupiter->update(['syncretic_origin_id' => $this->zeus->id]);
+
+        $this->getJson(route('graph.entities', $this->zeus))
+            ->assertJsonFragment(['name' => 'Jupiter', 'syncreticOrigin' => [
+                'id' => $this->zeus->id,
+                'name' => 'Zeus',
+                'religion' => 'Greek',
+                'url' => route('entities.show', $this->zeus),
+                'graphUrl' => route('graph.entities', $this->zeus),
+            ]])
+            ->assertJsonFragment(['name' => 'Zeus', 'syncreticOrigin' => null]);
+    }
+
     public function test_the_depth_is_limited(): void
     {
         $this->getJson(route('graph.entities', ['entity' => $this->zeus, 'depth' => 9]))->assertUnprocessable();

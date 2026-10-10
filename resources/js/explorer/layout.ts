@@ -2,14 +2,14 @@ import type { Graph, Point, ReligionRef } from './types';
 
 export const NODE_WIDTH = 168;
 export const NODE_HEIGHT = 52;
-export const COLUMN_GAP = 36;
-export const ROW_GAP = 120;
+export const COLUMN_GAP = 56;
+export const ROW_GAP = 150;
 
 /** Partners sit further apart so their double line and its label read clearly. */
-export const CONSORT_GAP = 110;
+export const CONSORT_GAP = 120;
 
-const COMPONENT_GAP = 140;
-const LANE_GAP = 220;
+const COMPONENT_GAP = 200;
+const LANE_GAP = 240;
 const SLOT = NODE_WIDTH + COLUMN_GAP;
 const SWEEPS = 6;
 

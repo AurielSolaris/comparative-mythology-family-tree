@@ -142,7 +142,7 @@ class EntityGraph
     protected function build(array $ids, bool $truncated): array
     {
         $entities = Entity::query()
-            ->with(['religion', 'additionalReligions'])
+            ->with(['religion', 'additionalReligions', 'syncreticOrigin.religion'])
             ->whereIn('id', $ids)
             ->ordered()
             ->get();
@@ -164,6 +164,14 @@ class EntityGraph
                     'value' => $entity->gender->value,
                     'label' => $entity->gender->label(),
                     'symbol' => $entity->gender->symbol(),
+                ] : null,
+                'element' => $entity->element,
+                'syncreticOrigin' => $entity->syncreticOrigin ? [
+                    'id' => $entity->syncreticOrigin->id,
+                    'name' => $entity->syncreticOrigin->name,
+                    'religion' => $entity->syncreticOrigin->religion->name,
+                    'url' => route('entities.show', $entity->syncreticOrigin),
+                    'graphUrl' => route('graph.entities', $entity->syncreticOrigin),
                 ] : null,
                 'region' => $entity->region,
                 'origin' => $entity->origin,

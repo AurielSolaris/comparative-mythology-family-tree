@@ -1,11 +1,11 @@
 <div class="uk-grid-small" uk-grid>
-    <div class="uk-width-2-3@s">
+    <div class="uk-width-1-2@s">
         <x-admin.field label="Name" for="name">
             <input @class(['uk-input', 'uk-form-danger' => $errors->has('name')]) id="name" name="name" type="text" value="{{ old('name', $entity->name) }}" required maxlength="255">
         </x-admin.field>
     </div>
 
-    <div class="uk-width-1-3@s">
+    <div class="uk-width-1-4@s">
         <x-admin.field label="Gender" for="gender">
             <select @class(['uk-select', 'uk-form-danger' => $errors->has('gender')]) id="gender" name="gender">
                 <option value="">Not specified</option>
@@ -13,6 +13,17 @@
                     <option value="{{ $gender->value }}" @selected(old('gender', $entity->gender?->value) === $gender->value)>{{ $gender->symbol() }} {{ $gender->label() }}</option>
                 @endforeach
             </select>
+        </x-admin.field>
+    </div>
+
+    <div class="uk-width-1-4@s">
+        <x-admin.field label="Element" for="element">
+            <input @class(['uk-input', 'uk-form-danger' => $errors->has('element')]) id="element" name="element" type="text" value="{{ old('element', $entity->element) }}" maxlength="255" list="known-elements" placeholder="e.g. Storm">
+            <datalist id="known-elements">
+                @foreach ($elements as $element)
+                    <option value="{{ $element }}"></option>
+                @endforeach
+            </datalist>
         </x-admin.field>
     </div>
 </div>
@@ -60,6 +71,43 @@
         <div class="uk-text-danger uk-text-small uk-margin-small-top">{{ $message }}</div>
     @enderror
 </div>
+</div>
+
+@php($syncreticOrigin = old('syncretic_origin_id') !== null ? App\Models\Entity::query()->with('religion')->find(old('syncretic_origin_id')) : ($entity->exists ? $entity->syncreticOrigin : null))
+
+<div x-data="entityPicker(@js([
+    'suggestUrl' => route('search.suggestions'),
+    'excludeId' => $entity->id,
+    'selected' => $syncreticOrigin ? ['id' => $syncreticOrigin->id, 'label' => "{$syncreticOrigin->name} ({$syncreticOrigin->religion->name})"] : null,
+]))">
+    <x-admin.field label="Syncretic origin / most like" for="syncretic-origin-search" error="syncretic_origin_id" help="The entity this one was syncretised from or most resembles, e.g. Roman Jupiter → Greek Zeus. Clear the field to remove it.">
+        <div class="uk-inline uk-width-1-1" @click.outside="open = false">
+            <span class="uk-form-icon" uk-icon="search"></span>
+            <input @class(['uk-input', 'uk-form-danger' => $errors->has('syncretic_origin_id')])
+                   id="syncretic-origin-search" type="search" autocomplete="off" placeholder="Search by name or alias"
+                   x-model="query"
+                   @input.debounce.250ms="search"
+                   @keydown.arrow-down.prevent="move(1)"
+                   @keydown.arrow-up.prevent="move(-1)"
+                   @keydown.enter="if (open) { $event.preventDefault(); chooseHighlighted() }"
+                   @keydown.escape="open = false">
+            <input type="hidden" name="syncretic_origin_id" :value="selectedId">
+
+            <div class="uk-drop uk-dropdown uk-width-1-1 uk-margin-small-top" :class="{ 'uk-open': open }">
+                <ul class="uk-nav uk-dropdown-nav">
+                    <template x-for="(result, index) in results" :key="result.id">
+                        <li :class="{ 'uk-active': index === highlighted }">
+                            <a href="#" @click.prevent="choose(result)" @mouseenter="highlighted = index">
+                                <span x-text="result.name"></span>
+                                <div class="uk-nav-subtitle" x-text="result.religion"></div>
+                            </a>
+                        </li>
+                    </template>
+                    <li class="uk-nav-header" x-show="results.length === 0">No matches</li>
+                </ul>
+            </div>
+        </div>
+    </x-admin.field>
 </div>
 
 <x-admin.field label="Origin" for="origin" help="Where or how the entity came to be, e.g. “Born from the sea foam off Cythera”.">

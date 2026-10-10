@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { component } from '../alpine';
+import { paintLegendIcons } from './elements';
 import { religionColor, TreeCanvas } from './renderer';
 import { type Role, ROLE_ORDER, roleLabel } from './terms';
 import type { Graph, GraphEdge, GraphNode, ReligionRef } from './types';
@@ -32,6 +33,7 @@ export interface Suggestion {
     name: string;
     religion: string;
     gender: string | null;
+    element: string | null;
     region: string | null;
     aliases: string[];
     url: string;
@@ -107,6 +109,7 @@ export function explorer(config: ExplorerConfig) {
         compareOpen: false,
         compared: config.selectedReligions.length > 1 ? [...config.selectedReligions] : ([] as string[]),
         gender: '',
+        element: '',
         depth: '2',
         query: '',
         suggestions: [] as Suggestion[],
@@ -119,6 +122,8 @@ export function explorer(config: ExplorerConfig) {
                 onActivate: (node) => this.focusOn(node),
                 onSwap: config.swapSidesUrl ? (edge) => this.swapSides(edge) : undefined,
             });
+
+            paintLegendIcons(this.$el);
 
             history.replaceState({ graphUrl: config.graphUrl, title: document.title } satisfies HistoryState, '');
 
@@ -134,6 +139,11 @@ export function explorer(config: ExplorerConfig) {
 
         get isEntityGraph(): boolean {
             return this.graph?.focus != null;
+        },
+
+        /** Religions side by side, where "is like" links are drawn. */
+        get isComparison(): boolean {
+            return (this.graph?.lanes?.length ?? 0) > 0;
         },
 
         get relatives(): Relative[] {
@@ -292,7 +302,11 @@ export function explorer(config: ExplorerConfig) {
                 return;
             }
 
-            const params = { q: query, ...(this.gender ? { gender: this.gender } : {}) };
+            const params = {
+                q: query,
+                ...(this.gender ? { gender: this.gender } : {}),
+                ...(this.element ? { element: this.element } : {}),
+            };
             const { data } = await axios.get<{ data: Suggestion[] }>(config.suggestUrl, { params });
 
             if (query === this.query.trim()) {
@@ -332,6 +346,30 @@ export function explorer(config: ExplorerConfig) {
 
         fit() {
             tree?.fit();
+        },
+
+        resetArrangement() {
+            tree?.resetArrangement();
+        },
+
+        /** Downloads the whole tree, as currently arranged, as a PNG named after the page. */
+        async downloadPng() {
+            const blob = await tree?.exportPng();
+
+            if (!blob) {
+                return;
+            }
+
+            const name = document.title
+                .toLowerCase()
+                .normalize('NFKD')
+                .replace(/[^\p{L}\p{N}]+/gu, '-')
+                .replace(/^-+|-+$/g, '');
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${name || 'family-tree'}.png`;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(link.href), 1000);
         },
     });
 }

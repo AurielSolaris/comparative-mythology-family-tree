@@ -2,11 +2,16 @@
 
 namespace App\Support;
 
+use App\Enums\SourceKind;
 use App\Models\Entity;
 use App\Models\EntityRelation;
 use App\Models\Religion;
+use App\Models\Source;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use PDO;
 use RuntimeException;
+use ZipArchive;
 
 /**
  * The mythology dataset (religions, entities and relations) as JSON or as a
@@ -19,13 +24,19 @@ use RuntimeException;
  * Each relation also carries from_role / to_role, the relation read from
  * each end in gendered words ("Father of" / "Daughter of"). They are
  * derived from the entities' genders at export time.
+ *
+ * Entities and relations list their sources. Link sources carry a URL;
+ * file sources carry the file's path inside the export archive
+ * ("sources/…"), and when any stored files exist the download is a zip of
+ * the JSON / SQLite plus those files (see toArchive()).
  */
 class DatasetExport
 {
     /**
      * 2: dropped the app's database ids from the JSON; SQLite keys are local to the file.
+     * 3: added sources on entities and relations, and the entities' element and syncretic origin.
      */
-    public const FORMAT_VERSION = 2;
+    public const FORMAT_VERSION = 3;
 
     /**
      * @return array{format: string, format_version: int, exported_at: string, religions: list<array<string, mixed>>, entities: list<array<string, mixed>>, relations: list<array<string, mixed>>}
@@ -35,7 +46,7 @@ class DatasetExport
         $religions = Religion::query()->orderBy('name')->get();
         $slugs = $religions->pluck('slug', 'id');
 
-        $entities = Entity::query()->with('additionalReligions:id')->ordered()->get();
+        $entities = Entity::query()->with(['additionalReligions:id', 'sources'])->ordered()->get();
         $entitySlugs = $entities->pluck('slug', 'id');
         $entitiesById = $entities->keyBy('id');
 
@@ -52,14 +63,17 @@ class DatasetExport
                 'slug' => $entity->slug,
                 'name' => $entity->name,
                 'gender' => $entity->gender?->value,
+                'element' => $entity->element,
+                'syncretic_origin' => $entity->syncretic_origin_id ? $entitySlugs[$entity->syncretic_origin_id] : null,
                 'religion' => $slugs[$entity->religion_id],
                 'also_religions' => $entity->additionalReligions->map(fn (Religion $religion) => $slugs[$religion->id])->values()->all(),
                 'region' => $entity->region,
                 'origin' => $entity->origin,
                 'aliases' => $entity->aliases ?? [],
                 'position' => $entity->position,
+                'sources' => $this->sourcesArray($entity->sources),
             ])->all(),
-            'relations' => EntityRelation::query()->orderBy('id')->get()->map(fn (EntityRelation $relation) => [
+            'relations' => EntityRelation::query()->with('sources')->orderBy('id')->get()->map(fn (EntityRelation $relation) => [
                 'kind' => $relation->kind->value,
                 'from' => $entitySlugs[$relation->entity_id],
                 'to' => $entitySlugs[$relation->related_entity_id],
@@ -68,8 +82,91 @@ class DatasetExport
                 'tradition' => $relation->religion_id ? $slugs[$relation->religion_id] : null,
                 'note' => $relation->note,
                 'sides_swapped' => $relation->sides_swapped,
+                'sources' => $this->sourcesArray($relation->sources),
             ])->all(),
         ];
+    }
+
+    /**
+     * @param  Collection<int, Source>  $sources
+     * @return list<array{kind: string, url: ?string, file: ?string, original_name: ?string, ref: ?string}>
+     */
+    protected function sourcesArray(Collection $sources): array
+    {
+        return $sources->map(fn (Source $source) => [
+            'kind' => $source->kind->value,
+            'url' => $source->url,
+            'file' => $source->exportPath(),
+            'original_name' => $source->original_name,
+            'ref' => $source->ref,
+        ])->values()->all();
+    }
+
+    /**
+     * File sources whose files are in storage, i.e. what an archive bundles.
+     *
+     * @return Collection<int, Source>
+     */
+    public function storedFileSources(): Collection
+    {
+        return Source::query()
+            ->where('kind', SourceKind::File)
+            ->whereNotNull('path')
+            ->orderBy('id')
+            ->get()
+            ->filter(fn (Source $source) => $source->hasStoredFile())
+            ->values();
+    }
+
+    /**
+     * Writes a zip holding the dataset (as "$datasetName", in the given
+     * format) and every stored source file under sources/, and returns its
+     * path. The caller deletes the file when done.
+     *
+     * @param  'json'|'sqlite'|'db'  $format
+     */
+    public function toArchive(string $format, string $datasetName): string
+    {
+        $path = $this->temporaryFile();
+        $zip = new ZipArchive;
+
+        if ($zip->open($path, ZipArchive::OVERWRITE) !== true) {
+            throw new RuntimeException('Could not create the export archive.');
+        }
+
+        $sqlite = null;
+
+        if ($format === 'json') {
+            $zip->addFromString($datasetName, $this->toJson());
+        } else {
+            $sqlite = $this->toSqliteFile();
+            $zip->addFile($sqlite, $datasetName);
+        }
+
+        $disk = Storage::disk(Source::DISK);
+
+        foreach ($this->storedFileSources() as $source) {
+            $zip->addFile($disk->path($source->path), $source->exportPath());
+        }
+
+        $zip->close();
+
+        if ($sqlite !== null) {
+            unlink($sqlite);
+        }
+
+        return $path;
+    }
+
+    protected function temporaryFile(): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'mythology-export-');
+
+        if ($path === false) {
+            throw new RuntimeException('Could not create a temporary file for the export.');
+        }
+
+        return $path;
     }
 
     /**
@@ -95,12 +192,7 @@ class DatasetExport
      */
     public function toSqliteFile(): string
     {
-        $path = tempnam(sys_get_temp_dir(), 'mythology-export-');
-
-        if ($path === false) {
-            throw new RuntimeException('Could not create a temporary file for the export.');
-        }
-
+        $path = $this->temporaryFile();
         $data = $this->toArray();
         $database = new PDO('sqlite:'.$path, options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 
@@ -126,6 +218,8 @@ class DatasetExport
                 slug TEXT NOT NULL UNIQUE,
                 name TEXT NOT NULL,
                 gender TEXT,
+                element TEXT,
+                syncretic_origin_id INTEGER REFERENCES entities (id), -- the entity it was syncretised from / is most like
                 religion_id INTEGER NOT NULL REFERENCES religions (id),
                 region TEXT,
                 origin TEXT,
@@ -154,6 +248,21 @@ class DatasetExport
                 sides_swapped INTEGER NOT NULL DEFAULT 0,
                 UNIQUE (kind, entity_id, related_entity_id)
             );
+
+            -- Citations for an entity or a relation (exactly one is set).
+            -- 'link' sources have a url; 'file' sources have the file's path
+            -- inside the export zip, e.g. 'sources/abc123.pdf'.
+            CREATE TABLE sources (
+                id INTEGER PRIMARY KEY,
+                entity_id INTEGER REFERENCES entities (id),
+                relation_id INTEGER REFERENCES relations (id),
+                kind TEXT NOT NULL,
+                url TEXT,
+                file TEXT,
+                original_name TEXT,
+                ref TEXT, -- line / verse / page cited
+                CHECK ((entity_id IS NULL) <> (relation_id IS NULL))
+            );
             SQL);
 
         $database->beginTransaction();
@@ -174,18 +283,33 @@ class DatasetExport
         /** @var array<string, int> $entityIds */
         $entityIds = [];
         $insertEntity = $database->prepare(
-            'INSERT INTO entities (slug, name, gender, religion_id, region, origin, aliases, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO entities (slug, name, gender, element, religion_id, region, origin, aliases, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
         );
         $insertMembership = $database->prepare('INSERT INTO entity_religions (entity_id, religion_id) VALUES (?, ?)');
+        $insertSource = $database->prepare(
+            'INSERT INTO sources (entity_id, relation_id, kind, url, file, original_name, ref) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        );
         foreach ($data['entities'] as $entity) {
             $insertEntity->execute([
-                $entity['slug'], $entity['name'], $entity['gender'], $religionIds[$entity['religion']],
+                $entity['slug'], $entity['name'], $entity['gender'], $entity['element'], $religionIds[$entity['religion']],
                 $entity['region'], $entity['origin'], json_encode($entity['aliases'], JSON_UNESCAPED_UNICODE), $entity['position'],
             ]);
             $entityIds[$entity['slug']] = (int) $database->lastInsertId();
 
             foreach ($entity['also_religions'] as $slug) {
                 $insertMembership->execute([$entityIds[$entity['slug']], $religionIds[$slug]]);
+            }
+
+            foreach ($entity['sources'] as $source) {
+                $insertSource->execute([$entityIds[$entity['slug']], null, ...array_values($source)]);
+            }
+        }
+
+        // Origins can point at entities inserted after them, so they're filled in once all exist.
+        $setOrigin = $database->prepare('UPDATE entities SET syncretic_origin_id = ? WHERE id = ?');
+        foreach ($data['entities'] as $entity) {
+            if ($entity['syncretic_origin'] !== null) {
+                $setOrigin->execute([$entityIds[$entity['syncretic_origin']], $entityIds[$entity['slug']]]);
             }
         }
 
@@ -197,6 +321,11 @@ class DatasetExport
                 $relation['kind'], $entityIds[$relation['from']], $entityIds[$relation['to']], $relation['from_role'], $relation['to_role'],
                 $relation['tradition'] ? $religionIds[$relation['tradition']] : null, $relation['note'], (int) $relation['sides_swapped'],
             ]);
+            $relationId = (int) $database->lastInsertId();
+
+            foreach ($relation['sources'] as $source) {
+                $insertSource->execute([null, $relationId, ...array_values($source)]);
+            }
         }
 
         $database->commit();

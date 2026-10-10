@@ -1,3 +1,4 @@
+import { elementSprite, likenessSprite } from './elements';
 import { COLUMN_GAP, CONSORT_GAP, type Lane, layoutGraph, NODE_HEIGHT, NODE_WIDTH, ROW_GAP } from './layout';
 import { childWord, pairWords } from './terms';
 import type { Graph, GraphEdge, GraphNode, Point, ReligionRef } from './types';
@@ -10,6 +11,9 @@ export const COLORS = {
     muted: '#999999',
     border: '#e5e5e5',
     primary: '#1e87f0',
+    likeness: '#7c4dff',
+    area: '#cfe2f6',
+    areaFill: 'rgba(30, 135, 240, 0.03)',
     parent: '#b4b4b4',
     consort: '#f0506e',
     sibling: '#999999',
@@ -32,7 +36,18 @@ const KIND_LABELS: Record<Exclude<GraphEdge['kind'], 'parent'>, string> = {
     council: 'council/court',
 };
 
+/**
+ * The area nodes can be dragged around in: the space the layout needs,
+ * plus this share of its width and height on each side (10% in total),
+ * and at least AREA_MIN_PADDING.
+ */
+const AREA_MARGIN = 0.05;
+const AREA_MIN_PADDING = 32;
+
 const ARROW_SIZE = 7;
+/** Size of one element-icon pixel on the canvas, at 100% zoom. */
+const ELEMENT_PIXEL = 2;
+const LIKENESS_BADGE_RADIUS = 14;
 /** Room above the top row of a comparison for the religion titles. */
 const LANE_HEADER = 70;
 const LANE_PADDING = 40;
@@ -69,22 +84,42 @@ interface SwapButton {
     at: Point;
 }
 
+/** An "is like" link from an entity to its syncretic origin, drawn in comparisons. */
+interface Likeness {
+    from: number;
+    to: number;
+}
+
+interface LikenessBadge {
+    likeness: Likeness;
+    at: Point;
+}
+
 const SWAP_BUTTON_RADIUS = 11;
 
 /**
  * Draws a graph as a family tree on a canvas, with drag to pan, wheel or
- * pinch to zoom, click to select and double-click to activate.
+ * pinch to zoom, click to select and double-click to activate. Nodes can
+ * be dragged to rearrange them within the tree's area.
  */
 export class TreeCanvas {
-    private readonly context: CanvasRenderingContext2D;
+    /** Swapped for an offscreen canvas's context while exporting a PNG. */
+    private context: CanvasRenderingContext2D;
+    private exporting = false;
     private graph: Graph | null = null;
     private positions = new Map<number, Point>();
     private lanes: Lane[] = [];
+    /** Where nodes may be dragged (world coordinates); null without nodes. */
+    private area: Rect | null = null;
+    /** Positions of the nodes the viewer has dragged, kept across reloads of the same tree. */
+    private readonly arranged = new Map<number, Point>();
     private nodes = new Map<number, GraphNode>();
     private selectedId: number | null = null;
     private hoverId: number | null = null;
     private swapButtons: SwapButton[] = [];
     private hoverSwapId: number | null = null;
+    private likenesses: Likeness[] = [];
+    private likenessBadges: LikenessBadge[] = [];
 
     /** Screen space covered by floating panels, kept clear when fitting. */
     private insets = { top: 0, right: 0, bottom: 0, left: 0 };
@@ -95,6 +130,7 @@ export class TreeCanvas {
 
     private readonly pointers = new Map<number, Point>();
     private drag: { start: Point; offset: Point; moved: boolean } | null = null;
+    private nodeDrag: { id: number; start: Point; origin: Point; moved: boolean } | null = null;
     private pinch: { distance: number; scale: number } | null = null;
     private frame = 0;
 
@@ -120,8 +156,9 @@ export class TreeCanvas {
     }
 
     /**
-     * Shows a graph. With keepView the zoom, position and selection stay as
-     * they are (used after an edit that only rearranges the same tree).
+     * Shows a graph. With keepView the zoom, position, selection and any
+     * dragged nodes stay as they are (used after an edit that only
+     * rearranges the same tree).
      */
     setGraph(graph: Graph | null, keepView = false): void {
         this.graph = graph;
@@ -130,8 +167,27 @@ export class TreeCanvas {
         this.positions = layout.positions;
         this.lanes = layout.lanes;
         this.nodes = new Map((graph?.nodes ?? []).map((node) => [node.id, node]));
+        this.likenesses = this.lanes.length
+            ? (graph?.nodes ?? [])
+                  .filter((node) => node.syncreticOrigin && node.syncreticOrigin.id !== node.id && this.nodes.has(node.syncreticOrigin.id))
+                  .map((node) => ({ from: node.id, to: node.syncreticOrigin!.id }))
+            : [];
+        this.area = this.positions.size ? padArea(this.contentBounds()) : null;
         this.hoverId = null;
         this.hoverSwapId = null;
+        this.nodeDrag = null;
+
+        if (!keepView) {
+            this.arranged.clear();
+        }
+
+        for (const [id, point] of this.arranged) {
+            if (this.positions.has(id)) {
+                this.positions.set(id, this.clampToArea(id, point));
+            } else {
+                this.arranged.delete(id);
+            }
+        }
 
         if (keepView && this.selectedId !== null && this.nodes.has(this.selectedId)) {
             this.requestDraw();
@@ -157,13 +213,19 @@ export class TreeCanvas {
         this.insets = { ...this.insets, ...insets };
     }
 
-    /** Zooms so the whole graph is visible in the area not covered by panels. */
+    /** Puts dragged nodes back where the layout placed them. */
+    resetArrangement(): void {
+        this.arranged.clear();
+        this.setGraph(this.graph, true);
+    }
+
+    /** Zooms so the whole area is visible in the space not covered by panels. */
     fit(): void {
         const size = this.size();
         const width = size.width - this.insets.left - this.insets.right;
         const height = size.height - this.insets.top - this.insets.bottom;
 
-        if (this.positions.size === 0) {
+        if (!this.area) {
             this.scale = 1;
             this.offset = { x: size.width / 2, y: size.height / 2 };
             this.requestDraw();
@@ -171,15 +233,7 @@ export class TreeCanvas {
             return;
         }
 
-        const xs = [...this.positions.values()].map((point) => point.x);
-        const ys = [...this.positions.values()].map((point) => point.y);
-        const lanePadding = this.lanes.length ? LANE_PADDING : 0;
-        const bounds = {
-            left: Math.min(...xs) - NODE_WIDTH / 2 - lanePadding,
-            right: Math.max(...xs) + NODE_WIDTH / 2 + lanePadding,
-            top: Math.min(...ys) - NODE_HEIGHT / 2 - (this.lanes.length ? LANE_HEADER : 0),
-            bottom: Math.max(...ys) + NODE_HEIGHT / 2 + lanePadding,
-        };
+        const bounds = this.area;
 
         this.scale = clamp(
             Math.min(
@@ -231,9 +285,17 @@ export class TreeCanvas {
         this.pointers.set(event.pointerId, this.local(event));
 
         if (this.pointers.size === 1) {
-            this.drag = { start: this.local(event), offset: { ...this.offset }, moved: false };
+            const start = this.local(event);
+            const node = this.swapButtonAt(start) ? null : this.nodeAt(start);
+
+            if (node) {
+                this.nodeDrag = { id: node.id, start, origin: { ...this.positions.get(node.id)! }, moved: false };
+            } else {
+                this.drag = { start, offset: { ...this.offset }, moved: false };
+            }
         } else if (this.pointers.size === 2) {
             this.drag = null;
+            this.nodeDrag = null;
             this.pinch = { distance: this.pointerDistance(), scale: this.scale };
         }
     }
@@ -246,6 +308,15 @@ export class TreeCanvas {
 
             this.setHover(button ? null : (this.nodeAt(point)?.id ?? null), button?.edge.id ?? null);
 
+            const badge = button ? null : this.likenessBadgeAt(point);
+
+            if (badge) {
+                const name = (id: number) => this.nodes.get(id)?.name ?? '';
+                this.canvas.title = `${name(badge.likeness.from)} is like ${name(badge.likeness.to)} (syncretic origin)`;
+            } else if (!button) {
+                this.canvas.title = '';
+            }
+
             return;
         }
 
@@ -255,6 +326,25 @@ export class TreeCanvas {
             const [a, b] = [...this.pointers.values()];
             const target = (this.pinch.scale * this.pointerDistance()) / this.pinch.distance;
             this.zoomBy(target / this.scale, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+
+            return;
+        }
+
+        if (this.nodeDrag) {
+            const dx = point.x - this.nodeDrag.start.x;
+            const dy = point.y - this.nodeDrag.start.y;
+
+            this.nodeDrag.moved ||= Math.hypot(dx, dy) > CLICK_TOLERANCE;
+
+            if (this.nodeDrag.moved) {
+                const { id, origin } = this.nodeDrag;
+                const moved = this.clampToArea(id, { x: origin.x + dx / this.scale, y: origin.y + dy / this.scale });
+
+                this.canvas.style.cursor = 'grabbing';
+                this.positions.set(id, moved);
+                this.arranged.set(id, moved);
+                this.requestDraw();
+            }
 
             return;
         }
@@ -274,7 +364,9 @@ export class TreeCanvas {
     }
 
     private pointerUp(event: PointerEvent, cancelled = false): void {
-        if (!cancelled && this.drag && !this.drag.moved && this.pointers.size === 1) {
+        const gesture = this.drag ?? this.nodeDrag;
+
+        if (!cancelled && gesture && !gesture.moved && this.pointers.size === 1) {
             const button = this.swapButtonAt(this.local(event));
 
             if (button) {
@@ -288,6 +380,7 @@ export class TreeCanvas {
 
         this.pointers.delete(event.pointerId);
         this.drag = null;
+        this.nodeDrag = null;
 
         if (this.pointers.size < 2) {
             this.pinch = null;
@@ -319,6 +412,7 @@ export class TreeCanvas {
             '=': () => this.zoomBy(1.25),
             '-': () => this.zoomBy(0.8),
             '0': () => this.fit(),
+            r: () => this.resetArrangement(),
         };
 
         if (actions[event.key]) {
@@ -361,6 +455,61 @@ export class TreeCanvas {
         return null;
     }
 
+    /** The space the layout's nodes, comparison columns and "is like" arcs take up. */
+    private contentBounds(): Rect {
+        const xs = [...this.positions.values()].map((point) => point.x);
+        const ys = [...this.positions.values()].map((point) => point.y);
+        const lanePadding = this.lanes.length ? LANE_PADDING : 0;
+        const apexes = this.likenesses.map((likeness) =>
+            arcApex(this.positions.get(likeness.from)!, this.positions.get(likeness.to)!, this.likenessSide(likeness)).y,
+        );
+
+        return {
+            left: Math.min(...xs) - NODE_WIDTH / 2 - lanePadding,
+            right: Math.max(...xs) + NODE_WIDTH / 2 + lanePadding,
+            top: Math.min(Math.min(...ys) - NODE_HEIGHT / 2 - (this.lanes.length ? LANE_HEADER : 0), ...apexes.map((y) => y - LIKENESS_BADGE_RADIUS)),
+            bottom: Math.max(Math.max(...ys) + NODE_HEIGHT / 2 + lanePadding, ...apexes.map((y) => y + LIKENESS_BADGE_RADIUS)),
+        };
+    }
+
+    /** Below the pair (1), or above (-1) when an equivalent arc already runs below. */
+    private likenessSide(likeness: Likeness): -1 | 1 {
+        const hasEquivalent = (this.graph?.edges ?? []).some(
+            (edge) =>
+                edge.kind === 'equivalent' &&
+                ((edge.from === likeness.from && edge.to === likeness.to) || (edge.from === likeness.to && edge.to === likeness.from)),
+        );
+
+        return hasEquivalent ? -1 : 1;
+    }
+
+    /**
+     * The nearest centre for the node that keeps it (and, in a comparison,
+     * its column's header and padding) inside the area. In a comparison a
+     * node also stays within its religion's column.
+     */
+    private clampToArea(id: number, point: Point): Point {
+        if (!this.area) {
+            return point;
+        }
+
+        const lanePadding = this.lanes.length ? LANE_PADDING : 0;
+        let left = this.area.left + NODE_WIDTH / 2 + lanePadding;
+        let right = this.area.right - NODE_WIDTH / 2 - lanePadding;
+        const top = this.area.top + NODE_HEIGHT / 2 + (this.lanes.length ? LANE_HEADER : 0);
+        const bottom = this.area.bottom - NODE_HEIGHT / 2 - lanePadding;
+
+        const laneSlug = this.nodes.get(id)?.lane;
+        const lane = laneSlug ? this.lanes.find((candidate) => candidate.slug === laneSlug) : undefined;
+
+        if (lane) {
+            left = Math.max(left, lane.left - LANE_PADDING / 2);
+            right = Math.min(right, lane.right + LANE_PADDING / 2);
+        }
+
+        return { x: clamp(point.x, left, Math.max(left, right)), y: clamp(point.y, top, Math.max(top, bottom)) };
+    }
+
     private local(event: MouseEvent): Point {
         const rect = this.canvas.getBoundingClientRect();
 
@@ -396,14 +545,59 @@ export class TreeCanvas {
     }
 
     private draw(): void {
+        this.paint(window.devicePixelRatio || 1, this.size());
+    }
+
+    /**
+     * Renders the whole tree (its full area, at 100% zoom) to a PNG, without
+     * the dot grid, the drag area frame, hover highlights or switch-sides
+     * buttons. Resolves to null when there is nothing to export.
+     */
+    exportPng(pixelRatio = 2): Promise<Blob | null> {
+        if (!this.graph || !this.area) {
+            return Promise.resolve(null);
+        }
+
+        const padding = 24;
+        const width = Math.ceil(this.area.right - this.area.left + padding * 2);
+        const height = Math.ceil(this.area.bottom - this.area.top + padding * 2);
+        // Browsers refuse canvases much past 16k pixels a side.
+        const ratio = Math.min(pixelRatio, 16000 / width, 16000 / height);
+
+        const target = document.createElement('canvas');
+        target.width = Math.round(width * ratio);
+        target.height = Math.round(height * ratio);
+
+        const saved = { context: this.context, offset: this.offset, scale: this.scale, hoverId: this.hoverId, hoverSwapId: this.hoverSwapId };
+
+        this.context = target.getContext('2d')!;
+        this.offset = { x: padding - this.area.left, y: padding - this.area.top };
+        this.scale = 1;
+        this.hoverId = null;
+        this.hoverSwapId = null;
+        this.exporting = true;
+
+        try {
+            this.paint(ratio, { width, height });
+        } finally {
+            Object.assign(this, saved);
+            this.exporting = false;
+            this.requestDraw();
+        }
+
+        return new Promise((resolve) => target.toBlob(resolve, 'image/png'));
+    }
+
+    private paint(ratio: number, { width, height }: { width: number; height: number }): void {
         const context = this.context;
-        const ratio = window.devicePixelRatio || 1;
-        const { width, height } = this.size();
 
         context.setTransform(ratio, 0, 0, ratio, 0, 0);
         context.fillStyle = COLORS.background;
         context.fillRect(0, 0, width, height);
-        this.drawGrid(width, height);
+
+        if (!this.exporting) {
+            this.drawGrid(width, height);
+        }
 
         if (!this.graph) {
             return;
@@ -411,6 +605,10 @@ export class TreeCanvas {
 
         context.translate(this.offset.x, this.offset.y);
         context.scale(this.scale, this.scale);
+
+        if (!this.exporting) {
+            this.drawArea();
+        }
 
         this.drawLanes();
 
@@ -429,11 +627,24 @@ export class TreeCanvas {
             }
         }
 
+        this.likenessBadges = this.likenesses.map((likeness) =>
+            this.drawLikeness(likeness, likeness.from === active || likeness.to === active),
+        );
+
+        // The node being dragged is drawn last, on top of the others.
+        const dragged = this.nodeDrag?.moved ? this.nodeDrag.id : null;
+
         for (const node of this.graph.nodes) {
-            this.drawNode(node);
+            if (node.id !== dragged) {
+                this.drawNode(node);
+            }
         }
 
-        this.swapButtons = this.scale >= LABEL_MIN_SCALE ? this.placeSwapButtons() : [];
+        if (dragged !== null && this.nodes.has(dragged)) {
+            this.drawNode(this.nodes.get(dragged)!);
+        }
+
+        this.swapButtons = this.scale >= LABEL_MIN_SCALE && !this.exporting ? this.placeSwapButtons() : [];
 
         if (this.scale >= LABEL_MIN_SCALE) {
             // Highlighted edges were drawn last; give their labels first pick.
@@ -443,6 +654,70 @@ export class TreeCanvas {
         for (const button of this.swapButtons) {
             this.drawSwapButton(button);
         }
+
+        for (const badge of this.likenessBadges) {
+            this.drawLikenessBadge(badge);
+        }
+    }
+
+    /**
+     * A dashed purple arc with an arrow from an entity to the entity it
+     * "is like" (its syncretic origin). Bends below the pair, or above when
+     * an equivalent arc already runs below. Returns where its badge goes.
+     */
+    private drawLikeness(likeness: Likeness, highlighted: boolean): LikenessBadge {
+        const context = this.context;
+        const from = this.positions.get(likeness.from)!;
+        const to = this.positions.get(likeness.to)!;
+        const side = this.likenessSide(likeness);
+
+        context.save();
+        context.strokeStyle = COLORS.likeness;
+        context.fillStyle = COLORS.likeness;
+        context.lineWidth = highlighted ? 2.5 : 1.5;
+        context.globalAlpha = highlighted || this.hoverId === null ? 1 : 0.75;
+        context.setLineDash([10, 5]);
+
+        const [middle] = this.drawArc(from, to, side);
+
+        this.drawArrowhead({ x: to.x, y: to.y + (side * NODE_HEIGHT) / 2 }, side === 1 ? -Math.PI / 2 : Math.PI / 2);
+        context.restore();
+
+        return { likeness, at: middle };
+    }
+
+    /** A round badge with the pixel "twins" icon, in the middle of an "is like" link. */
+    private drawLikenessBadge(badge: LikenessBadge): void {
+        const context = this.context;
+        const sprite = likenessSprite();
+        const width = sprite.width * ELEMENT_PIXEL;
+        const height = sprite.height * ELEMENT_PIXEL;
+
+        context.save();
+        context.shadowColor = 'rgba(0, 0, 0, 0.12)';
+        context.shadowBlur = 6;
+        context.fillStyle = COLORS.background;
+        context.beginPath();
+        context.arc(badge.at.x, badge.at.y, LIKENESS_BADGE_RADIUS, 0, Math.PI * 2);
+        context.fill();
+        context.restore();
+
+        context.save();
+        context.strokeStyle = COLORS.likeness;
+        context.lineWidth = 1.5;
+        context.beginPath();
+        context.arc(badge.at.x, badge.at.y, LIKENESS_BADGE_RADIUS, 0, Math.PI * 2);
+        context.stroke();
+        context.imageSmoothingEnabled = false;
+        context.drawImage(sprite, badge.at.x - width / 2, badge.at.y - height / 2, width, height);
+        context.restore();
+    }
+
+    private likenessBadgeAt(screen: Point): LikenessBadge | null {
+        const x = (screen.x - this.offset.x) / this.scale;
+        const y = (screen.y - this.offset.y) / this.scale;
+
+        return this.likenessBadges.find((badge) => Math.hypot(x - badge.at.x, y - badge.at.y) <= LIKENESS_BADGE_RADIUS + 2) ?? null;
     }
 
     /**
@@ -558,6 +833,27 @@ export class TreeCanvas {
                 this.drawLabel(text, spot, label.color);
             }
         }
+    }
+
+    /** A faint dashed frame showing how far nodes can be dragged. */
+    private drawArea(): void {
+        if (!this.area) {
+            return;
+        }
+
+        const context = this.context;
+        const { left, top, right, bottom } = this.area;
+
+        context.save();
+        context.fillStyle = COLORS.areaFill;
+        context.strokeStyle = COLORS.area;
+        context.lineWidth = 1.5;
+        context.setLineDash([8, 6]);
+        context.beginPath();
+        context.roundRect(left, top, right - left, bottom - top, 16);
+        context.fill();
+        context.stroke();
+        context.restore();
     }
 
     /** A tinted column with a title for each religion in a comparison. */
@@ -735,9 +1031,10 @@ export class TreeCanvas {
         context.beginPath();
         context.moveTo(start.x, start.y);
 
-        if (end.y > start.y && !crossesLanes) {
-            const middle = end.y - (ROW_GAP - NODE_HEIGHT) / 2;
-            const radius = Math.min(10, Math.abs(end.x - start.x) / 2, (middle - start.y) / 2);
+        if (end.y - start.y > 16 && !crossesLanes) {
+            // Just above the child's row, or halfway when a dragged child sits closer.
+            const middle = Math.max((start.y + end.y) / 2, end.y - (ROW_GAP - NODE_HEIGHT) / 2);
+            const radius = Math.max(0, Math.min(10, Math.abs(end.x - start.x) / 2, (middle - start.y) / 2));
 
             context.arcTo(start.x, middle, end.x, middle, radius);
             context.arcTo(end.x, middle, end.x, end.y, radius);
@@ -902,8 +1199,20 @@ export class TreeCanvas {
         context.roundRect(left, top, NODE_WIDTH, NODE_HEIGHT, 6);
         context.stroke();
 
+        const sprite = elementSprite(node.element);
+        const spriteWidth = sprite ? sprite.width * ELEMENT_PIXEL : 0;
+
+        if (sprite) {
+            const spriteHeight = sprite.height * ELEMENT_PIXEL;
+
+            context.save();
+            context.imageSmoothingEnabled = false;
+            context.drawImage(sprite, left + NODE_WIDTH - 10 - spriteWidth, point.y - spriteHeight / 2, spriteWidth, spriteHeight);
+            context.restore();
+        }
+
         const textLeft = left + 14;
-        const textWidth = NODE_WIDTH - 24;
+        const textWidth = NODE_WIDTH - 24 - (sprite ? spriteWidth + 6 : 0);
 
         context.textAlign = 'left';
         context.textBaseline = 'middle';
@@ -959,6 +1268,14 @@ export function religionColor(religion: Pick<ReligionRef, 'slug' | 'color'>): st
     }
 
     return `hsl(${Math.abs(hash) % 360}, 62%, 52%)`;
+}
+
+/** The bounds grown by AREA_MARGIN of their size on each side (at least AREA_MIN_PADDING). */
+function padArea(bounds: Rect): Rect {
+    const padX = Math.max((bounds.right - bounds.left) * AREA_MARGIN, AREA_MIN_PADDING);
+    const padY = Math.max((bounds.bottom - bounds.top) * AREA_MARGIN, AREA_MIN_PADDING);
+
+    return { left: bounds.left - padX, right: bounds.right + padX, top: bounds.top - padY, bottom: bounds.bottom + padY };
 }
 
 /** Whether two partners sit next to each other in the same row (with nothing between). */

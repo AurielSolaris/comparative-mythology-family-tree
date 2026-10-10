@@ -16,6 +16,9 @@ export interface GraphNode {
     /** Other religions the entity also belongs to. */
     otherReligions: ReligionRef[];
     gender: { value: string; label: string; symbol: string } | null;
+    element: string | null;
+    /** The entity this one was syncretised from or is most like. */
+    syncreticOrigin: { id: number; name: string; religion: string; url: string; graphUrl: string } | null;
     region: string | null;
     origin: string | null;
     aliases: string[];

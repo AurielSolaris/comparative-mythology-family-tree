@@ -4,7 +4,7 @@
 
 @section('content')
     <x-admin.page-header :title="$entity->name">
-        <x-slot:subtitle>{{ $entity->religion->name }}@if ($entity->additionalReligions->isNotEmpty()) (also {{ $entity->additionalReligions->pluck('name')->join(', ') }})@endif @if ($entity->gender) · {{ $entity->gender->symbol() }} {{ $entity->gender->label() }}@endif @if ($entity->region) · {{ $entity->region }}@endif</x-slot:subtitle>
+        <x-slot:subtitle>{{ $entity->religion->name }}@if ($entity->additionalReligions->isNotEmpty()) (also {{ $entity->additionalReligions->pluck('name')->join(', ') }})@endif @if ($entity->gender) · {{ $entity->gender->symbol() }} {{ $entity->gender->label() }}@endif @if ($entity->element) · {{ $entity->element }}@endif @if ($entity->region) · {{ $entity->region }}@endif</x-slot:subtitle>
         <x-slot:actions>
             <a class="uk-button uk-button-default" href="{{ route('entities.show', $entity) }}"><span uk-icon="git-branch"></span> View tree</a>
         </x-slot:actions>

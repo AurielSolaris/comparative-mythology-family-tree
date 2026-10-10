@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Gender;
 use App\Enums\RelationRole;
+use App\Models\Concerns\HasSources;
 use App\Models\Concerns\HasUniqueSlug;
 use Database\Factories\EntityFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -17,19 +18,29 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-#[Fillable(['religion_id', 'name', 'gender', 'region', 'origin', 'aliases'])]
+#[Fillable(['religion_id', 'name', 'gender', 'element', 'syncretic_origin_id', 'region', 'origin', 'aliases'])]
 class Entity extends Model
 {
     /** @use HasFactory<EntityFactory> */
-    use HasFactory, HasUniqueSlug;
+    use HasFactory, HasSources, HasUniqueSlug;
 
     /**
-     * New entities go to the end of the admins' manual order.
+     * New entities go to the end of the admins' manual order. Relations are
+     * deleted through Eloquent (not just the database cascade) so their
+     * sources and stored files go too.
      */
     protected static function booted(): void
     {
         static::creating(function (Entity $entity) {
             $entity->position = (int) static::query()->max('position') + 1;
+        });
+
+        static::deleting(function (Entity $entity) {
+            EntityRelation::query()
+                ->where('entity_id', $entity->id)
+                ->orWhere('related_entity_id', $entity->id)
+                ->get()
+                ->each->delete();
         });
     }
 
@@ -52,6 +63,16 @@ class Entity extends Model
     public function religion(): BelongsTo
     {
         return $this->belongsTo(Religion::class);
+    }
+
+    /**
+     * The entity this one was syncretised from, or is most like.
+     *
+     * @return BelongsTo<Entity, $this>
+     */
+    public function syncreticOrigin(): BelongsTo
+    {
+        return $this->belongsTo(Entity::class, 'syncretic_origin_id');
     }
 
     /**
@@ -130,7 +151,17 @@ class Entity extends Model
     }
 
     /**
-     * Matches the term against names, aliases, regions and origins.
+     * The elements in use, for filters and form suggestions.
+     *
+     * @return Collection<int, string>
+     */
+    public static function knownElements(): Collection
+    {
+        return static::query()->whereNotNull('element')->distinct()->orderBy('element')->pluck('element');
+    }
+
+    /**
+     * Matches the term against names, aliases, elements, regions and origins.
      *
      * @param  Builder<Entity>  $query
      */
@@ -142,6 +173,7 @@ class Entity extends Model
         $query->where(function (Builder $query) use ($like) {
             $query->whereLike('name', $like)
                 ->orWhereLike('aliases', $like)
+                ->orWhereLike('element', $like)
                 ->orWhereLike('region', $like)
                 ->orWhereLike('origin', $like);
         });

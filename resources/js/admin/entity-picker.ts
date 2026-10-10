@@ -4,18 +4,20 @@ import type { Suggestion } from '../explorer/explorer';
 
 interface EntityPickerConfig {
     suggestUrl: string;
-    /** The entity being edited, which can't be related to itself. */
-    excludeId: number;
+    /** The entity being edited, which can't be related to itself (null while creating one). */
+    excludeId: number | null;
+    /** An entity already chosen, shown when the form opens. */
+    selected?: { id: number; label: string } | null;
 }
 
 /**
  * Search-as-you-type field that fills a hidden input with the chosen
- * entity's id.
+ * entity's id. Clearing the field clears the choice.
  */
 export function entityPicker(config: EntityPickerConfig) {
     return component({
-        query: '',
-        selectedId: '',
+        query: config.selected?.label ?? '',
+        selectedId: config.selected ? String(config.selected.id) : '',
         results: [] as Suggestion[],
         open: false,
         highlighted: -1,

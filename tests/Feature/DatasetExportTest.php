@@ -6,11 +6,14 @@ use App\Enums\RelationKind;
 use App\Models\Entity;
 use App\Models\EntityRelation;
 use App\Models\Religion;
+use App\Models\Source;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use PDO;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Tests\TestCase;
+use ZipArchive;
 
 class DatasetExportTest extends TestCase
 {
@@ -29,9 +32,10 @@ class DatasetExportTest extends TestCase
         $this->canaanite = Religion::factory()->create(['name' => 'Canaanite', 'color' => '#aa8800']);
         $eblaite = Religion::factory()->create(['name' => 'Eblaite']);
 
-        $this->el = Entity::factory()->for($this->canaanite)->create(['name' => 'El', 'gender' => 'male', 'aliases' => ['Ilu', 'ʾĒl']]);
+        $this->el = Entity::factory()->for($this->canaanite)->create(['name' => 'El', 'gender' => 'male', 'element' => 'Sky', 'aliases' => ['Ilu', 'ʾĒl']]);
         $this->baal = Entity::factory()->for($this->canaanite)->create(['name' => 'Baal']);
         $this->baal->additionalReligions()->attach($eblaite);
+        $this->el->update(['syncretic_origin_id' => $this->baal->id]);
 
         EntityRelation::create([
             'entity_id' => $this->el->id,
@@ -54,7 +58,7 @@ class DatasetExportTest extends TestCase
         $content = $response->streamedContent();
         $data = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
 
-        $this->assertSame(2, $data['format_version']);
+        $this->assertSame(3, $data['format_version']);
         $this->assertSame(['Canaanite', 'Eblaite'], array_column($data['religions'], 'name'));
         $this->assertSame('#aa8800', $data['religions'][0]['color']);
 
@@ -62,11 +66,15 @@ class DatasetExportTest extends TestCase
         $this->assertSame('canaanite', $baal['religion']);
         $this->assertSame(['eblaite'], $baal['also_religions']);
         $this->assertSame(['Ilu', 'ʾĒl'], collect($data['entities'])->firstWhere('name', 'El')['aliases']);
+        $this->assertSame('Sky', collect($data['entities'])->firstWhere('name', 'El')['element']);
+        $this->assertNull($baal['element']);
+        $this->assertSame('baal', collect($data['entities'])->firstWhere('name', 'El')['syncretic_origin']);
+        $this->assertNull($baal['syncretic_origin']);
 
         $this->assertSame([[
             'kind' => 'council', 'from' => 'el', 'to' => 'baal',
             'from_role' => 'Council/court includes', 'to_role' => 'Member of the council/court of',
-            'tradition' => 'canaanite', 'note' => 'divine assembly', 'sides_swapped' => false,
+            'tradition' => 'canaanite', 'note' => 'divine assembly', 'sides_swapped' => false, 'sources' => [],
         ]], $data['relations']);
 
         // The app's database ids are not exported; slugs identify everything.
@@ -106,6 +114,10 @@ class DatasetExportTest extends TestCase
                  JOIN religions t ON t.id = rel.tradition_religion_id',
             )->fetch(PDO::FETCH_NUM));
             $this->assertSame('["Ilu","ʾĒl"]', $database->query("SELECT aliases FROM entities WHERE name = 'El'")->fetchColumn());
+            $this->assertSame('Sky', $database->query("SELECT element FROM entities WHERE name = 'El'")->fetchColumn());
+            $this->assertSame('Baal', $database->query(
+                "SELECT origin.name FROM entities e JOIN entities origin ON origin.id = e.syncretic_origin_id WHERE e.name = 'El'",
+            )->fetchColumn());
             $this->assertSame([], $database->query('PRAGMA foreign_key_check')->fetchAll());
             $this->assertFalse((bool) $database->query("SELECT 1 FROM sqlite_master WHERE name = 'users'")->fetchColumn());
 
@@ -143,6 +155,64 @@ class DatasetExportTest extends TestCase
         unlink($copy);
     }
 
+    public function test_link_sources_are_listed_in_plain_json_and_sqlite_downloads(): void
+    {
+        Storage::fake(Source::DISK);
+        $relation = EntityRelation::query()->sole();
+        Source::factory()->for($this->el, 'sourceable')->create(['url' => 'https://example.com/ktu-1.4', 'ref' => 'KTU 1.4 iv 24']);
+        Source::factory()->for($relation, 'sourceable')->create(['url' => 'https://example.com/ktu-1.2', 'ref' => null]);
+
+        $response = $this->get(route('export', 'json'))->assertOk();
+        $this->assertStringEndsWith('.json', $response->headers->get('Content-Disposition'));
+        $data = json_decode($response->streamedContent(), true);
+
+        $this->assertSame([[
+            'kind' => 'link', 'url' => 'https://example.com/ktu-1.4', 'file' => null, 'original_name' => null, 'ref' => 'KTU 1.4 iv 24',
+        ]], collect($data['entities'])->firstWhere('name', 'El')['sources']);
+        $this->assertSame('https://example.com/ktu-1.2', $data['relations'][0]['sources'][0]['url']);
+
+        $database = $this->openSqliteDownload(route('export', 'sqlite'));
+
+        $this->assertSame(['El', 'link', 'https://example.com/ktu-1.4', 'KTU 1.4 iv 24'], $database->query(
+            'SELECT e.name, s.kind, s.url, s.ref FROM sources s JOIN entities e ON e.id = s.entity_id',
+        )->fetch(PDO::FETCH_NUM));
+        $this->assertSame(['council', 'https://example.com/ktu-1.2'], $database->query(
+            'SELECT r.kind, s.url FROM sources s JOIN relations r ON r.id = s.relation_id',
+        )->fetch(PDO::FETCH_NUM));
+        $this->assertSame([], $database->query('PRAGMA foreign_key_check')->fetchAll());
+    }
+
+    public function test_file_sources_turn_the_download_into_a_zip_with_the_files(): void
+    {
+        Storage::fake(Source::DISK);
+        $source = Source::factory()->file('baal-cycle.txt')->for($this->baal, 'sourceable')->create(['ref' => 'col. ii, l. 5']);
+        Source::factory()->for($this->el, 'sourceable')->create();
+
+        foreach (['json', 'sqlite'] as $format) {
+            $response = $this->get(route('export', $format))->assertOk()->assertDownload();
+            $this->assertStringEndsWith("-{$format}.zip", $response->headers->get('Content-Disposition'));
+
+            /** @var BinaryFileResponse $file */
+            $file = $response->baseResponse;
+            $zip = new ZipArchive;
+            $zip->open($file->getFile()->getPathname());
+
+            $datasetName = collect(range(0, $zip->numFiles - 1))->map(fn (int $index) => $zip->getNameIndex($index))
+                ->first(fn (string $name) => str_ends_with($name, ".{$format}"));
+            $this->assertNotNull($datasetName);
+            $this->assertSame(Storage::disk(Source::DISK)->get($source->path), $zip->getFromName($source->exportPath()));
+
+            if ($format === 'json') {
+                $baal = collect(json_decode($zip->getFromName($datasetName), true)['entities'])->firstWhere('name', 'Baal');
+                $this->assertSame([[
+                    'kind' => 'file', 'url' => null, 'file' => $source->exportPath(), 'original_name' => 'baal-cycle.txt', 'ref' => 'col. ii, l. 5',
+                ]], $baal['sources']);
+            }
+
+            $zip->close();
+        }
+    }
+
     public function test_unknown_formats_are_not_found(): void
     {
         $this->get('/export/csv')->assertNotFound();
@@ -159,5 +229,16 @@ class DatasetExportTest extends TestCase
             ->get(route('admin.dashboard'))
             ->assertSee(route('export', 'json'))
             ->assertSee(route('export', 'db'));
+    }
+
+    private function openSqliteDownload(string $url): PDO
+    {
+        /** @var BinaryFileResponse $file */
+        $file = $this->get($url)->assertOk()->baseResponse;
+        $copy = tempnam(sys_get_temp_dir(), 'export-test-');
+        copy($file->getFile()->getPathname(), $copy);
+        $this->beforeApplicationDestroyed(fn () => @unlink($copy));
+
+        return new PDO('sqlite:'.$copy);
     }
 }

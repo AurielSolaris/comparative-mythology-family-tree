@@ -25,6 +25,7 @@ class EntityController extends Controller
             'q' => ['nullable', 'string', 'max:100'],
             'religion' => ['nullable', 'integer'],
             'gender' => ['nullable', Rule::enum(Gender::class)],
+            'element' => ['nullable', 'string', 'max:255'],
         ]);
 
         $entities = Entity::query()
@@ -33,6 +34,7 @@ class EntityController extends Controller
             ->when($filters['q'] ?? null, fn ($query, string $term) => $query->search($term))
             ->when($filters['religion'] ?? null, fn ($query, int $religionId) => $query->inReligion($religionId))
             ->when($filters['gender'] ?? null, fn ($query, string $gender) => $query->where('gender', $gender))
+            ->when($filters['element'] ?? null, fn ($query, string $element) => $query->where('element', $element))
             ->ordered()
             ->paginate(25)
             ->withQueryString();
@@ -42,6 +44,7 @@ class EntityController extends Controller
             'filters' => $filters,
             'religions' => Religion::query()->orderBy('name')->get(),
             'genders' => Gender::cases(),
+            'elements' => Entity::knownElements(),
         ]);
     }
 
@@ -69,7 +72,7 @@ class EntityController extends Controller
     public function edit(Entity $entity): View
     {
         return view('admin.entities.edit', [
-            'entity' => $entity->loadRelatives()->load('additionalReligions'),
+            'entity' => $entity->loadRelatives()->load(['additionalReligions', 'syncreticOrigin.religion']),
             'roles' => RelationRole::cases(),
             ...$this->formOptions(),
         ]);
@@ -103,15 +106,16 @@ class EntityController extends Controller
     }
 
     /**
-     * The religion choices, plus regions already in use as suggestions.
+     * The religion choices, plus elements and regions already in use as suggestions.
      *
-     * @return array{religions: \Illuminate\Database\Eloquent\Collection<int, Religion>, genders: list<Gender>, regions: Collection<int, string>}
+     * @return array{religions: \Illuminate\Database\Eloquent\Collection<int, Religion>, genders: list<Gender>, elements: Collection<int, string>, regions: Collection<int, string>}
      */
     protected function formOptions(): array
     {
         return [
             'religions' => Religion::query()->orderBy('name')->get(),
             'genders' => Gender::cases(),
+            'elements' => Entity::knownElements(),
             'regions' => Entity::query()->whereNotNull('region')->distinct()->orderBy('region')->pluck('region'),
         ];
     }

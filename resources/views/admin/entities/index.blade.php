@@ -16,7 +16,7 @@
                 <div class="uk-width-expand@s">
                     <div class="uk-inline uk-width-1-1">
                         <span class="uk-form-icon" uk-icon="search"></span>
-                        <input class="uk-input" type="search" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Name, alias, region or origin" aria-label="Search entities">
+                        <input class="uk-input" type="search" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Name, alias, element, region or origin" aria-label="Search entities">
                     </div>
                 </div>
                 <div class="uk-width-1-4@s">
@@ -35,6 +35,16 @@
                         @endforeach
                     </select>
                 </div>
+                @if ($elements->isNotEmpty())
+                    <div class="uk-width-1-6@s">
+                        <select class="uk-select" name="element" aria-label="Element" onchange="this.form.requestSubmit()">
+                            <option value="">Any element</option>
+                            @foreach ($elements as $element)
+                                <option value="{{ $element }}" @selected(($filters['element'] ?? null) === $element)>{{ $element }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
                 <div class="uk-width-auto@s">
                     <button class="uk-button uk-button-default" type="submit">Search</button>
                 </div>
@@ -60,6 +70,7 @@
                             <th class="uk-padding-small">Name</th>
                             <th>Religion</th>
                             <th class="uk-visible@s">Gender</th>
+                            <th class="uk-visible@m">Element</th>
                             <th class="uk-visible@m">Region</th>
                             <th class="uk-table-shrink uk-text-nowrap">Relations</th>
                             <th class="uk-table-shrink"><span class="uk-hidden">Actions</span></th>
@@ -86,6 +97,7 @@
                                     @endif
                                 </td>
                                 <td class="uk-visible@s uk-text-muted">@if ($entity->gender){{ $entity->gender->symbol() }} {{ $entity->gender->label() }}@endif</td>
+                                <td class="uk-visible@m uk-text-muted">{{ $entity->element }}</td>
                                 <td class="uk-visible@m uk-text-muted">{{ $entity->region }}</td>
                                 <td>{{ $entity->outgoing_relations_count + $entity->incoming_relations_count }}</td>
                                 <td class="uk-text-nowrap uk-padding-small">

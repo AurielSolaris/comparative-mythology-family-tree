@@ -10,6 +10,7 @@ use App\Http\Controllers\SearchSuggestionController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', LandingController::class)->name('home');
+Route::get('/home', LandingController::class);
 Route::get('/explore', [ExplorerController::class, 'home'])->name('explore');
 Route::get('/entities/{entity:slug}', [ExplorerController::class, 'entity'])->name('entities.show');
 Route::get('/religions/{religion:slug}', [ExplorerController::class, 'religion'])->name('religions.show');

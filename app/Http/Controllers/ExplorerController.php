@@ -52,6 +52,7 @@ class ExplorerController extends Controller
             'selectedReligions' => $selected?->pluck('slug')->all() ?? [],
             'religions' => Religion::query()->withMemberCount()->orderBy('name')->get(),
             'genders' => Gender::cases(),
+            'elements' => Entity::knownElements(),
         ]);
     }
 }

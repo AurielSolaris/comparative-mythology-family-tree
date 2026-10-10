@@ -51,6 +51,11 @@ class EntityRequest extends FormRequest
             'additional_religion_ids' => ['array'],
             'additional_religion_ids.*' => ['integer', 'distinct', Rule::exists('religions', 'id')],
             'gender' => ['nullable', Rule::enum(Gender::class)],
+            'element' => ['nullable', 'string', 'max:255'],
+            'syncretic_origin_id' => [
+                'nullable', 'integer', Rule::exists('entities', 'id'),
+                Rule::notIn(array_filter([$this->route('entity')?->id])),
+            ],
             'region' => ['nullable', 'string', 'max:255'],
             'origin' => ['nullable', 'string', 'max:5000'],
             'aliases' => ['nullable', 'array', 'max:50'],
@@ -66,6 +71,7 @@ class EntityRequest extends FormRequest
         return [
             'name.unique' => 'This religion already has an entity with that name.',
             'aliases.*.distinct' => 'Each alias should only be listed once.',
+            'syncretic_origin_id.not_in' => 'An entity cannot be its own syncretic origin.',
         ];
     }
 
@@ -78,6 +84,7 @@ class EntityRequest extends FormRequest
             'religion_id' => 'religion',
             'additional_religion_ids.*' => 'additional religion',
             'aliases.*' => 'alias',
+            'syncretic_origin_id' => 'syncretic origin',
         ];
     }
 }

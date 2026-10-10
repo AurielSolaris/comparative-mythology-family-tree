@@ -34,7 +34,7 @@
                 <div class="uk-margin-small-top uk-inline uk-width-1-1" @click.outside="suggestionsOpen = false">
                     <span class="uk-form-icon" uk-icon="search"></span>
                     <input class="uk-input" type="search" autocomplete="off" aria-label="Search entities"
-                           placeholder="Search names, aliases, regions…"
+                           placeholder="Search names, aliases, elements, regions…"
                            x-model="query"
                            @input.debounce.250ms="suggest"
                            @focus="suggestionsOpen = suggestions.length > 0 && query !== ''"
@@ -49,7 +49,7 @@
                                 <li :class="{ 'uk-active': index === highlighted }">
                                     <a :href="suggestion.url" @click.prevent="openSuggestion(suggestion)" @mouseenter="highlighted = index">
                                         <span x-text="suggestion.name"></span>
-                                        <div class="uk-nav-subtitle" x-text="[suggestion.religion, suggestion.gender, suggestion.region].filter(Boolean).join(' · ')"></div>
+                                        <div class="uk-nav-subtitle" x-text="[suggestion.religion, suggestion.gender, suggestion.element, suggestion.region].filter(Boolean).join(' · ')"></div>
                                     </a>
                                 </li>
                             </template>
@@ -67,6 +67,16 @@
                             @endforeach
                         </select>
                     </div>
+                    @if ($elements->isNotEmpty())
+                        <div class="uk-width-expand">
+                            <select class="uk-select uk-form-small" aria-label="Only search this element" x-model="element" @change="suggest">
+                                <option value="">Any element</option>
+                                @foreach ($elements as $element)
+                                    <option value="{{ $element }}">{{ $element }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
                     <div class="uk-width-auto" x-show="isEntityGraph" x-cloak>
                         <select class="uk-select uk-form-small" aria-label="Generations shown" x-model="depth" @change="reload" uk-tooltip="Relation hops shown around the centre">
                             <option value="1">1 hop</option>
@@ -131,16 +141,18 @@
             <div class="uk-card uk-card-default uk-card-small uk-card-body explorer-sidebar-legend" x-data="{ legendOpen: window.innerHeight >= 760 }">
                 <div class="uk-grid-small uk-flex-middle" uk-grid>
                     <div class="uk-width-expand">
-                        <button class="uk-button uk-button-text" type="button" @click="legendOpen = !legendOpen" :aria-expanded="legendOpen">
+                        <button class="uk-button uk-button-text uk-text-nowrap" type="button" @click="legendOpen = !legendOpen" :aria-expanded="legendOpen">
                             Legend
                             <span x-show="legendOpen" uk-icon="icon: chevron-down; ratio: 0.8"></span>
                             <span x-show="!legendOpen" uk-icon="icon: chevron-up; ratio: 0.8"></span>
                         </button>
                     </div>
-                    <div class="uk-width-auto">
+                    <div class="uk-width-auto explorer-view-controls">
                         <button class="uk-icon-button" type="button" uk-icon="plus" @click="zoomIn" uk-tooltip="Zoom in (+)" aria-label="Zoom in"></button>
                         <button class="uk-icon-button" type="button" uk-icon="minus" @click="zoomOut" uk-tooltip="Zoom out (−)" aria-label="Zoom out"></button>
                         <button class="uk-icon-button" type="button" uk-icon="expand" @click="fit" uk-tooltip="Fit to screen (0)" aria-label="Fit to screen"></button>
+                        <button class="uk-icon-button" type="button" uk-icon="refresh" @click="resetArrangement" uk-tooltip="Undo dragging (R)" aria-label="Put dragged entities back"></button>
+                        <button class="uk-icon-button" type="button" uk-icon="image" @click="downloadPng" :disabled="!graph?.nodes.length" uk-tooltip="Download as PNG" aria-label="Download the tree as a PNG image"></button>
                     </div>
                 </div>
                 <ul class="uk-list uk-list-collapse uk-text-small uk-margin-small-top" x-show="legendOpen" x-cloak>
@@ -149,6 +161,20 @@
                     <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h24" stroke="#999999" stroke-width="1.5" stroke-dasharray="5 4"/></svg> Siblings</li>
                     <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h24" stroke="#1e87f0" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/></svg> Equivalent in another religion</li>
                     <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h17" stroke="#faa05a" stroke-width="1.5" stroke-dasharray="6 3 2 3"/><path d="M19 1.5 26 5l-7 3.5z" fill="#faa05a"/></svg> Council / court (head → member)</li>
+                    <li x-show="isComparison">
+                        <svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h17" stroke="#7c4dff" stroke-width="1.5" stroke-dasharray="5 3"/><path d="M19 1.5 26 5l-7 3.5z" fill="#7c4dff"/></svg>
+                        <canvas class="explorer-legend-icon" data-legend-icon="likeness" aria-hidden="true"></canvas>
+                        Is like (syncretic origin)
+                    </li>
+                    <li class="uk-margin-small-top">
+                        <span class="uk-text-muted">Elements</span>
+                        <div class="explorer-legend-elements">
+                            @foreach (['Wisdom', 'Storm', 'War', 'Fertility', 'Sea', 'Fire', 'Sun', 'Love'] as $element)
+                                <span><canvas class="explorer-legend-icon" data-legend-icon="{{ $element }}" aria-hidden="true"></canvas>{{ $element }}</span>
+                            @endforeach
+                        </div>
+                    </li>
+                    <li class="uk-text-meta uk-margin-small-top">Drag an entity to move it within the dashed area.</li>
                 </ul>
                 <p class="uk-text-meta uk-margin-small-top uk-margin-remove-bottom" x-show="graph?.truncated" x-cloak>Only part of this tree is shown.</p>
                 @can('access-admin')
@@ -184,6 +210,23 @@
                                 <div>
                                     <dt>Gender</dt>
                                     <dd x-text="selected.gender.symbol + ' ' + selected.gender.label"></dd>
+                                </div>
+                            </template>
+                            <template x-if="selected.element">
+                                <div>
+                                    <dt>Element</dt>
+                                    <dd x-text="selected.element"></dd>
+                                </div>
+                            </template>
+                            <template x-if="selected.syncreticOrigin">
+                                <div>
+                                    <dt>Syncretic origin / most like</dt>
+                                    <dd>
+                                        <a :href="selected.syncreticOrigin.url"
+                                           @click.prevent="navigate(selected.syncreticOrigin.url, selected.syncreticOrigin.graphUrl, selected.syncreticOrigin.name)"
+                                           x-text="selected.syncreticOrigin.name"></a>
+                                        <span class="uk-text-meta" x-text="'· ' + selected.syncreticOrigin.religion"></span>
+                                    </dd>
                                 </div>
                             </template>
                             <template x-if="selected.region">

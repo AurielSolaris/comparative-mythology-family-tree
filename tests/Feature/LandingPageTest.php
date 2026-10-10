@@ -24,10 +24,16 @@ class LandingPageTest extends TestCase
             ->assertSee(route('export', 'sqlite'));
     }
 
-    public function test_admins_are_sent_to_the_dashboard(): void
+    public function test_the_landing_page_is_also_served_at_slash_home(): void
+    {
+        $this->get('/home')->assertOk()->assertSee('one click away', false);
+    }
+
+    public function test_logged_in_users_still_see_the_landing_page(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
 
-        $this->actingAs($admin)->get(route('home'))->assertRedirect(route('admin.dashboard'));
+        $this->actingAs($admin)->get(route('home'))->assertOk()->assertSee('one click away', false);
+        $this->actingAs($admin)->get('/home')->assertOk()->assertSee('one click away', false);
     }
 }
