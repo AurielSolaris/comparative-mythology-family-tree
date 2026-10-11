@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Cache\CitronStore;
+use Citron\Laravel\CitronStore;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;

@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
-use App\Citron\CitronDB;
-use App\Citron\CitronException;
+use Citron\CitronDB;
+use Citron\CitronException;
 use PHPUnit\Framework\TestCase;
 
 class CitronDBTest extends TestCase

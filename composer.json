@@ -15,8 +15,38 @@
             "homepage": "https://github.com/AurielSolaris"
         }
     ],
+    "repositories": [
+        {
+            "type": "package",
+            "package": {
+                "name": "citrondb/citron",
+                "version": "0.5.2",
+                "description": "CitronDB for PHP, with a Laravel cache store (bindings/php in the CitronDB repository)",
+                "dist": {
+                    "type": "zip",
+                    "url": "https://github.com/AurielSolaris/CitronDB/archive/ef878899e3058e69d5c743c7161757a0b4257488.zip"
+                },
+                "require": {
+                    "php": "^8.1"
+                },
+                "autoload": {
+                    "psr-4": {
+                        "Citron\\": "bindings/php/src/"
+                    }
+                },
+                "extra": {
+                    "laravel": {
+                        "providers": [
+                            "Citron\\Laravel\\CitronServiceProvider"
+                        ]
+                    }
+                }
+            }
+        }
+    ],
     "require": {
         "php": "^8.3",
+        "citrondb/citron": "0.5.2",
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0"
     },

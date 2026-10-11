@@ -80,7 +80,7 @@ There is no public registration. Only admins can log in, and only they can chang
 | --- | --- |
 | Backend | Laravel 13, PHP 8.5 |
 | Database | SQLite |
-| Cache | [CitronDB](https://github.com/AurielSolaris/CitronDB), via a custom PHP driver (see below) |
+| Cache | [CitronDB](https://github.com/AurielSolaris/CitronDB), via its PHP binding (see below) |
 | Views | Blade templates, styled with [UIkit](https://getuikit.com) |
 | Frontend scripts | TypeScript, Alpine.js, axios |
 | Tree rendering | HTML `<canvas>`, custom layout and renderer (`resources/js/explorer`) |
@@ -134,8 +134,6 @@ A good order for entering data: religions first, then entities, then relations a
 
 ```
 app/
-  Cache/            CitronStore and CitronLock: the Laravel cache driver
-  Citron/           CitronDB: a pure-PHP implementation of the CitronDB file format
   Enums/            Gender, RelationKind, RelationRole, SourceKind
   Http/Controllers/ Explorer and graph JSON (public), Admin/* (dashboard)
   Models/           Religion, Entity, EntityRelation, Source
@@ -175,10 +173,11 @@ docker/             Apache, PHP and entrypoint config for the container image
 
 ## The CitronDB cache driver
 
-CitronDB is a single-file key-value database written in Perl, with official bindings for C and Python only. This app talks to it through a pure-PHP implementation of the file format in `app/Citron/CitronDB.php`, so it needs neither Perl, a compiled library nor PHP's FFI extension.
+CitronDB is a single-file key-value database written in Perl. This app uses its official PHP binding, `citrondb/citron` (`bindings/php` in the CitronDB repository). The binding is a pure-PHP implementation of the file format, so it needs neither Perl, a compiled library nor PHP's FFI extension.
 
-- **Compatible with the official tools.** It uses the same file format (version 2), the same `<db>.lock` file locking, and the same atomic writes (write to a temporary file, flush it to disk, rename it over the database). The Perl, C and Python tools can therefore use the same file at the same time.
-- **Laravel cache store.** The `citron` store (`app/Cache/CitronStore.php`) supports expiry, tags, atomic `add`/`increment`, and locks. The cache file is `storage/framework/cache/cache.citron`.
+- **Installed with Composer.** CitronDB isn't on Packagist, so `composer.json` defines the package inline and downloads a pinned commit of the CitronDB repository from GitHub. To upgrade, change the commit in the `dist` URL (and the `version`), then run `composer update citrondb/citron`.
+- **Compatible with the official tools.** It writes byte-identical files to the Perl implementation, with the same `<db>.lock` file locking and the same atomic writes (write to a temporary file, flush it to disk, rename it over the database). The Perl, C, Python and PHP tools can therefore use the same file at the same time.
+- **Laravel cache store.** The package registers the `citron` cache driver itself (`Citron\Laravel\CitronServiceProvider`, found by package discovery). The store supports expiry, tags, atomic `add`/`increment`, and locks. The cache file is `storage/framework/cache/cache.citron`.
 - **Windows notes.**
   - The interop with Perl was checked against native Strawberry Perl. Git Bash's bundled MSYS Perl locks files in a way that no native implementation (C, Python or this driver) can see, so don't use it on a shared database.
   - Replacing the file is briefly retried, in case a virus scanner is holding it open.
