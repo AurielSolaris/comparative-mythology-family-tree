@@ -52,6 +52,21 @@ class EntityRelationManagementTest extends TestCase
         $this->assertDatabaseCount('entity_relations', 1);
     }
 
+    public function test_co_rulers_are_symmetric_and_shown_from_both_sides(): void
+    {
+        $this->relate($this->apollo, 'co_ruler_of', $this->zeus)->assertSessionHasNoErrors();
+        $this->relate($this->zeus, 'co_ruler_of', $this->apollo)->assertSessionHasErrors('related_entity_id');
+
+        $relation = EntityRelation::query()->sole();
+        $this->assertSame(RelationKind::CoRuler, $relation->kind);
+        $this->assertSame([$this->zeus->id, $this->apollo->id], [$relation->entity_id, $relation->related_entity_id]);
+        $this->assertTrue($relation->hasSwappableSides());
+
+        $this->get(route('admin.entities.edit', $this->zeus))->assertSee('Co-ruler with')->assertSee('Apollo');
+        $this->getJson(route('graph.entities', $this->apollo))
+            ->assertJsonFragment(['kind' => 'co_ruler', 'swappable' => true]);
+    }
+
     public function test_the_reverse_of_an_existing_parent_relation_is_rejected(): void
     {
         $this->relate($this->zeus, 'parent_of', $this->apollo)->assertSessionHasNoErrors();

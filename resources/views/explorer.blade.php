@@ -161,6 +161,7 @@
                     <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h24" stroke="#999999" stroke-width="1.5" stroke-dasharray="5 4"/></svg> Siblings</li>
                     <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h24" stroke="#1e87f0" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/></svg> Equivalent in another religion</li>
                     <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h17" stroke="#faa05a" stroke-width="1.5" stroke-dasharray="6 3 2 3"/><path d="M19 1.5 26 5l-7 3.5z" fill="#faa05a"/></svg> Council / court (head → member)</li>
+                    <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 8C8 1 20 1 26 8" fill="none" stroke="#c8962e" stroke-width="2"/></svg> ♛ Co-rulers</li>
                     <li x-show="isComparison">
                         <svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h17" stroke="#7c4dff" stroke-width="1.5" stroke-dasharray="5 3"/><path d="M19 1.5 26 5l-7 3.5z" fill="#7c4dff"/></svg>
                         <canvas class="explorer-legend-icon" data-legend-icon="likeness" aria-hidden="true"></canvas>
@@ -169,7 +170,7 @@
                     <li class="uk-margin-small-top">
                         <span class="uk-text-muted">Elements</span>
                         <div class="explorer-legend-elements">
-                            @foreach (['Wisdom', 'Storm', 'War', 'Fertility', 'Sea', 'Fire', 'Sun', 'Love'] as $element)
+                            @foreach (['Wisdom', 'Storm', 'War', 'Fertility', 'Sea', 'Fire', 'Sun', 'Love', 'Oath'] as $element)
                                 <span><canvas class="explorer-legend-icon" data-legend-icon="{{ $element }}" aria-hidden="true"></canvas>{{ $element }}</span>
                             @endforeach
                         </div>

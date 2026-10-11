@@ -19,6 +19,7 @@ export const COLORS = {
     sibling: '#999999',
     equivalent: '#1e87f0',
     council: '#faa05a',
+    coRuler: '#c8962e',
 };
 
 const MIN_SCALE = 0.15;
@@ -34,6 +35,7 @@ const KIND_LABELS: Record<Exclude<GraphEdge['kind'], 'parent'>, string> = {
     sibling: 'siblings',
     equivalent: '≈ equivalent',
     council: 'council/court',
+    co_ruler: '♛ co-rulers',
 };
 
 /**
@@ -455,21 +457,58 @@ export class TreeCanvas {
         return null;
     }
 
-    /** The space the layout's nodes, comparison columns and "is like" arcs take up. */
+    /** The space the layout's nodes, comparison columns and arcs (with their labels or badges) take up. */
     private contentBounds(): Rect {
         const xs = [...this.positions.values()].map((point) => point.x);
         const ys = [...this.positions.values()].map((point) => point.y);
         const lanePadding = this.lanes.length ? LANE_PADDING : 0;
-        const apexes = this.likenesses.map((likeness) =>
-            arcApex(this.positions.get(likeness.from)!, this.positions.get(likeness.to)!, this.likenessSide(likeness)).y,
-        );
+        const apexes = [
+            ...this.likenesses.map((likeness) =>
+                arcApex(this.positions.get(likeness.from)!, this.positions.get(likeness.to)!, this.likenessSide(likeness)).y,
+            ),
+            ...(this.graph?.edges ?? []).flatMap((edge) => {
+                const side = this.arcSide(edge);
+                const from = this.positions.get(edge.from);
+                const to = this.positions.get(edge.to);
+
+                return side && from && to ? [arcApex(from, to, side).y] : [];
+            }),
+        ];
+        const reach = Math.max(LIKENESS_BADGE_RADIUS, LABEL_HEIGHT / 2);
 
         return {
             left: Math.min(...xs) - NODE_WIDTH / 2 - lanePadding,
             right: Math.max(...xs) + NODE_WIDTH / 2 + lanePadding,
-            top: Math.min(Math.min(...ys) - NODE_HEIGHT / 2 - (this.lanes.length ? LANE_HEADER : 0), ...apexes.map((y) => y - LIKENESS_BADGE_RADIUS)),
-            bottom: Math.max(Math.max(...ys) + NODE_HEIGHT / 2 + lanePadding, ...apexes.map((y) => y + LIKENESS_BADGE_RADIUS)),
+            top: Math.min(Math.min(...ys) - NODE_HEIGHT / 2 - (this.lanes.length ? LANE_HEADER : 0), ...apexes.map((y) => y - reach)),
+            bottom: Math.max(Math.max(...ys) + NODE_HEIGHT / 2 + lanePadding, ...apexes.map((y) => y + reach)),
         };
+    }
+
+    /**
+     * Which way an edge bulges when drawEdge draws it as an arc (-1 above,
+     * 1 below), or null when it is drawn as an elbow or a straight line.
+     */
+    private arcSide(edge: GraphEdge): -1 | 1 | null {
+        const from = this.positions.get(edge.from);
+        const to = this.positions.get(edge.to);
+
+        if (!from || !to) {
+            return null;
+        }
+
+        switch (edge.kind) {
+            case 'sibling':
+            case 'co_ruler':
+                return -1;
+            case 'equivalent':
+                return 1;
+            case 'consort':
+                return areAdjacentPartners(from, to) ? null : -1;
+            case 'council':
+                return to.y - from.y < NODE_HEIGHT ? -1 : null;
+            default:
+                return null;
+        }
     }
 
     /** Below the pair (1), or above (-1) when an equivalent arc already runs below. */
@@ -955,6 +994,12 @@ export class TreeCanvas {
                 color = COLORS.sibling;
                 context.strokeStyle = color;
                 context.setLineDash([6, 5]);
+                candidates = this.drawArc(from, to, -1);
+                break;
+            case 'co_ruler':
+                color = COLORS.coRuler;
+                context.strokeStyle = color;
+                context.lineWidth += 0.5;
                 candidates = this.drawArc(from, to, -1);
                 break;
             case 'equivalent':

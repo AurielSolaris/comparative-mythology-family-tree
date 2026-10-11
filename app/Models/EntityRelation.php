@@ -29,11 +29,11 @@ class EntityRelation extends Model
 
     /**
      * Whether the tree lets admins choose which side each entity is drawn on
-     * (partners and siblings sit side by side in the same generation).
+     * (partners, siblings and co-rulers sit side by side in the same generation).
      */
     public function hasSwappableSides(): bool
     {
-        return in_array($this->kind, [RelationKind::Consort, RelationKind::Sibling], true);
+        return in_array($this->kind, [RelationKind::Consort, RelationKind::Sibling, RelationKind::CoRuler], true);
     }
 
     /**
@@ -109,6 +109,7 @@ class EntityRelation extends Model
             RelationKind::Consort => RelationRole::ConsortOf,
             RelationKind::Sibling => RelationRole::SiblingOf,
             RelationKind::Equivalent => RelationRole::EquivalentOf,
+            RelationKind::CoRuler => RelationRole::CoRulerOf,
         };
     }
 }

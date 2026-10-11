@@ -15,6 +15,7 @@ enum RelationRole: string
     case CouncilMemberOf = 'council_member_of';
     case CouncilHeadOf = 'council_head_of';
     case EquivalentOf = 'equivalent_of';
+    case CoRulerOf = 'co_ruler_of';
 
     public function kind(): RelationKind
     {
@@ -24,6 +25,7 @@ enum RelationRole: string
             self::SiblingOf => RelationKind::Sibling,
             self::CouncilMemberOf, self::CouncilHeadOf => RelationKind::Council,
             self::EquivalentOf => RelationKind::Equivalent,
+            self::CoRulerOf => RelationKind::CoRuler,
         };
     }
 
@@ -54,11 +56,12 @@ enum RelationRole: string
             self::CouncilMemberOf => 'Member of the council/court of',
             self::CouncilHeadOf => 'Council/court includes',
             self::EquivalentOf => 'Equivalent of',
+            self::CoRulerOf => 'Co-ruler with',
         };
     }
 
     /**
-     * Display order: parents, siblings, consorts, children, council, equivalents.
+     * Display order: parents, siblings, consorts, co-rulers, children, council, equivalents.
      */
     public function sortOrder(): int
     {
@@ -66,10 +69,11 @@ enum RelationRole: string
             self::ChildOf => 0,
             self::SiblingOf => 1,
             self::ConsortOf => 2,
-            self::ParentOf => 3,
-            self::CouncilMemberOf => 4,
-            self::CouncilHeadOf => 5,
-            self::EquivalentOf => 6,
+            self::CoRulerOf => 3,
+            self::ParentOf => 4,
+            self::CouncilMemberOf => 5,
+            self::CouncilHeadOf => 6,
+            self::EquivalentOf => 7,
         };
     }
 }

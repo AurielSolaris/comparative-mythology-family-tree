@@ -24,11 +24,12 @@ A short introduction to the project, with links into the explorer and the export
 
 - **Canvas family tree.** Generations are laid out as rows, with parents above children and partners side by side. Drag the background to pan, scroll or pinch to zoom, click an entity for its details, and double-click to re-centre the tree on it.
 - **Rearrange by dragging.** Drag an entity to move it. Entities stay inside a dashed area: the space the layout needs plus 10%. In a comparison they also stay in their religion's column. The ↻ button (or the R key) puts them back.
-- **Element icons.** Entities with an element get a pixel icon on their node: Wisdom (book), Storm (lightning), War (sword), Fertility (leaf), Sea (droplet), Fire (flame), Sun (sun) and Love (heart). Common synonyms match too, e.g. *Thunder*, *Ocean*, *Harvest*, *Agriculture*, *Solar*. Elements without an icon still show in the details panel.
+- **Element icons.** Entities with an element get a pixel icon on their node: Wisdom (book), Storm (lightning), War (sword), Fertility (leaf), Sea (droplet), Fire (flame), Sun (sun), Love (heart) and Oath (raised hand). Common synonyms match too, e.g. *Thunder*, *Ocean*, *Harvest*, *Agriculture*, *Solar*, *Covenant*. Elements without an icon still show in the details panel.
 - **Relations.**
   - Parent → child lines are labelled *son*, *daughter* or *child*.
   - Consorts are joined by a double line, siblings by a dashed arc.
   - Equivalents across religions (Zeus ≈ Jupiter) are joined by a dotted arc.
+  - Co-rulers (e.g. Kura and Barama at Ebla) are joined by a solid gold arc labelled *♛ co-rulers*.
   - Council/court membership is an arrow from the head to the member.
 
   Each line carries its tradition and note when they are recorded (e.g. *son · Eblaite*). Labels are only drawn where there is room.
@@ -52,7 +53,7 @@ Anyone can download the whole dataset: visitors from the explorer's left panel, 
 - **Identifiers.** Religions and entities are identified by their slug, and relations refer to entities by slug. A relation is identified by its `kind`, `from` and `to`. An entity's `syncretic_origin` is the slug of the entity it was syncretised from or most resembles. The app's own database ids are not exported. The integer keys in the SQLite file only link its tables together and are numbered fresh for each export.
 - **Role words.** Each relation includes `from_role` and `to_role`: the relation read from each end, in that entity's gendered words (e.g. `"Father of"` / `"Daughter of"`, `"Husband of"` / `"Wife of"`). They are computed from the entities' genders at export time. If you change a gender in an exported file, change these too; `gender` is the source of truth.
 - **Sources.** Each source has a `kind` (`link` or `file`), a `url` for links, and a `ref` for the line, verse or page cited. File sources give the file's path inside the download (`sources/…`) and its `original_name`. When any uploaded source files exist, the download becomes a zip (`…-json.zip`, `…-sqlite.zip`) holding the JSON or SQLite file plus a `sources/` folder; otherwise it is the plain file.
-- **Versioning.** The file's `format_version` is currently 3 (adds sources, `element` and `syncretic_origin`).
+- **Versioning.** The file's `format_version` is currently 4. Version 3 added sources, `element` and `syncretic_origin`; version 4 adds the `co_ruler` relation kind.
 - **Privacy.** Exports never include user accounts or other app internals.
 
 ### Admin dashboard (`/admin`)
@@ -63,7 +64,7 @@ Anyone can download the whole dataset: visitors from the explorer's left panel, 
   - a primary religion, plus any other religions it also belongs to (e.g. *Baal*: Canaanite, also Eblaite);
   - an optional **syncretic origin / most like**: another entity it was syncretised from or most resembles (e.g. Roman *Jupiter* → Greek *Zeus*). It can't point at itself, and is cleared if that entity is deleted.
 - **Filters** on the entity list by search text, religion, gender and element. The element field suggests elements already in use, to keep spellings consistent.
-- **Relations:** *parent/child*, *consort*, *sibling*, *equivalent* and *member of council/court*. Each relation can have an optional tradition and a note. Duplicates, self-links and contradictory links are rejected.
+- **Relations:** *parent/child*, *consort*, *sibling*, *equivalent*, *member of council/court* and *co-ruler*. Each relation can have an optional tradition and a note. Duplicates, self-links and contradictory links are rejected.
 - **Drag-to-reorder** the entity list. This order is also the starting left-to-right order of siblings on the canvas.
 - **Switch sides (⇄).** While logged in as an admin, each consort or sibling pair on the canvas has a ⇄ button that swaps which one is drawn on the left.
 - **Sources.** Cite where the data comes from, on entities and on relations:

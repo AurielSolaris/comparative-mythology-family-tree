@@ -84,6 +84,7 @@ export function relativesOf(node: GraphNode, graph: Graph): Relative[] {
             consort: 'consort',
             sibling: 'sibling',
             equivalent: 'equivalent',
+            co_ruler: 'coRuler',
         }[edge.kind] as Role;
 
         relatives.push({ role, label: roleLabel(role, node), node: other, tradition: edge.tradition, note: edge.note });

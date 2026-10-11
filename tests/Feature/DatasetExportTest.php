@@ -58,7 +58,7 @@ class DatasetExportTest extends TestCase
         $content = $response->streamedContent();
         $data = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
 
-        $this->assertSame(3, $data['format_version']);
+        $this->assertSame(4, $data['format_version']);
         $this->assertSame(['Canaanite', 'Eblaite'], array_column($data['religions'], 'name'));
         $this->assertSame('#aa8800', $data['religions'][0]['color']);
 

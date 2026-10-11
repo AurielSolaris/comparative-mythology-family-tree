@@ -1,4 +1,4 @@
-export type RelationKind = 'parent' | 'consort' | 'sibling' | 'equivalent' | 'council';
+export type RelationKind = 'parent' | 'consort' | 'sibling' | 'equivalent' | 'council' | 'co_ruler';
 
 export interface ReligionRef {
     name: string;

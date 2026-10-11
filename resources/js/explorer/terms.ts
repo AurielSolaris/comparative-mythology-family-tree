@@ -1,10 +1,10 @@
 import type { GraphNode } from './types';
 
 /** A relation seen from one entity, as in "Zeus is <role> Apollo". */
-export type Role = 'child' | 'sibling' | 'consort' | 'parent' | 'councilMember' | 'councilHead' | 'equivalent';
+export type Role = 'child' | 'sibling' | 'consort' | 'coRuler' | 'parent' | 'councilMember' | 'councilHead' | 'equivalent';
 
 /** Display order in the details panel. */
-export const ROLE_ORDER: Role[] = ['child', 'sibling', 'consort', 'parent', 'councilMember', 'councilHead', 'equivalent'];
+export const ROLE_ORDER: Role[] = ['child', 'sibling', 'consort', 'coRuler', 'parent', 'councilMember', 'councilHead', 'equivalent'];
 
 type Gendered = [male: string, female: string, neutral: string];
 
@@ -12,6 +12,7 @@ const ROLE_LABELS: Record<Role, Gendered | string> = {
     child: ['Son of', 'Daughter of', 'Child of'],
     sibling: ['Brother of', 'Sister of', 'Sibling of'],
     consort: ['Husband of', 'Wife of', 'Consort of'],
+    coRuler: 'Co-ruler with',
     parent: ['Father of', 'Mother of', 'Parent of'],
     councilMember: 'Member of the council/court of',
     councilHead: 'Council/court includes',

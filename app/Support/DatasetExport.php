@@ -35,8 +35,9 @@ class DatasetExport
     /**
      * 2: dropped the app's database ids from the JSON; SQLite keys are local to the file.
      * 3: added sources on entities and relations, and the entities' element and syncretic origin.
+     * 4: added the co_ruler relation kind.
      */
-    public const FORMAT_VERSION = 3;
+    public const FORMAT_VERSION = 4;
 
     /**
      * @return array{format: string, format_version: int, exported_at: string, religions: list<array<string, mixed>>, entities: list<array<string, mixed>>, relations: list<array<string, mixed>>}
@@ -235,7 +236,7 @@ class DatasetExport
             );
 
             -- parent and council: entity_id is the parent / head of the council.
-            -- consort, sibling and equivalent are symmetric.
+            -- consort, sibling, equivalent and co_ruler are symmetric.
             CREATE TABLE relations (
                 id INTEGER PRIMARY KEY,
                 kind TEXT NOT NULL,
