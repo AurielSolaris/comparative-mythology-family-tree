@@ -164,8 +164,8 @@
                     <li class="uk-margin-small-top">
                         <span class="uk-text-muted"><canvas class="explorer-legend-icon" data-legend-icon="likeness" aria-hidden="true"></canvas> Syncretism</span>
                     </li>
-                    <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h24" stroke="#1e87f0" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/></svg> Equivalent (identified as one god)</li>
-                    <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h24" stroke="#32a852" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/></svg> Cognates (common older god)</li>
+                    <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h24" stroke="#1e87f0" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/></svg> Equivalent (identified as one God)</li>
+                    <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h24" stroke="#32a852" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/></svg> Cognates (common older God)</li>
                     <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h24" stroke="#8c8c8c" stroke-width="2" stroke-dasharray="1 6" stroke-linecap="round"/></svg> Analogues (similar, no known link)</li>
                     <li>
                         <svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h17" stroke="#7c4dff" stroke-width="1.5" stroke-dasharray="5 3"/><path d="M19 1.5 26 5l-7 3.5z" fill="#7c4dff"/></svg>
@@ -279,7 +279,7 @@
             <div class="uk-card uk-card-default uk-card-body uk-text-center">
                 <span class="uk-text-primary" uk-icon="icon: git-branch; ratio: 2.5"></span>
                 <h1 class="uk-card-title">Explore the family trees of myth</h1>
-                <p class="uk-text-muted">Search for a god, hero or creature, or pick a religion to see its whole family.</p>
+                <p class="uk-text-muted">Search for a God, hero or creature, or pick a religion to see its whole family.</p>
                 @if ($religions->isNotEmpty())
                     <ul class="uk-subnav uk-subnav-pill uk-flex-center">
                         @foreach ($religions as $religion)

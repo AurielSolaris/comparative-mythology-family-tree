@@ -6,8 +6,8 @@
         : route('explore');
 
     $features = [
-        ['sprite' => 'ziggurat', 'title' => 'Interactive canvas', 'text' => 'Pan, zoom and search across pantheons. Double-click a god to put them at the centre of the universe. They tend to approve.'],
-        ['sprite' => 'trident', 'title' => 'Cross-pantheon relations', 'text' => 'Family lines, consorts and councils, plus every kind of syncretism: equivalents, cognates, fusions, avatars, adoptions and more, each marked attested, agreed or disputed. Some gods belong to two pantheons, so the tree does too.'],
+        ['sprite' => 'ziggurat', 'title' => 'Interactive canvas', 'text' => 'Pan, zoom and search across pantheons. Double-click a God to put them at the centre of the universe. They tend to approve.'],
+        ['sprite' => 'trident', 'title' => 'Cross-pantheon relations', 'text' => 'Family lines, consorts and councils, plus every kind of syncretism: equivalents, cognates, fusions, avatars, adoptions and more, each marked attested, agreed or disputed. Some Gods belong to two pantheons, so the tree does too.'],
         ['sprite' => 'tablet', 'title' => 'Open data', 'text' => 'Export everything as JSON or SQLite. Versioned, slug-based, and yours to take elsewhere.'],
     ];
 
@@ -15,7 +15,7 @@
         [
             'label' => 'Explore',
             'title' => 'One canvas, every generation.',
-            'text' => 'Parents above, children below, consorts side by side. Search by name, alias or region, then pick a god and set how many relations out you want to see.',
+            'text' => 'Parents above, children below, consorts side by side. Search by name, alias or region, then pick a God and set how many relations out you want to see.',
             'screenshot' => 'images/screenshots/explorer.png',
             'alt' => 'The canvas explorer showing a family tree',
         ],
@@ -42,12 +42,12 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="description" content="An interactive family tree of gods, cross-referenced across pantheons, with open data exports.">
+        <meta name="description" content="An interactive family tree of Gods, cross-referenced across pantheons, with open data exports.">
 
         <title>{{ config('app.name') }}</title>
         <x-favicons />
         <meta property="og:title" content="{{ config('app.name') }}">
-        <meta property="og:description" content="An interactive family tree of gods, cross-referenced across pantheons, with open data exports.">
+        <meta property="og:description" content="An interactive family tree of Gods, cross-referenced across pantheons, with open data exports.">
         <meta property="og:image" content="{{ asset('icon-512.png') }}">
 
         @fonts(['lora', 'inter', 'press-start-2p'])
@@ -84,7 +84,7 @@
                         <div class="uk-width-3-5@m">
                             <p class="landing-label">Ancient Near East</p>
                             <h1 class="landing-hero-title">Religious history,<br>one click away.</h1>
-                            <p class="landing-lead">Gods. Family trees. Cross-referenced. An interactive map of who begat whom, who married whom, and who turns out to be the same god under another name.</p>
+                            <p class="landing-lead">Gods. Family trees. Cross-referenced. An interactive map of who begat whom, who married whom, and who turns out to be the same God under another name.</p>
                             <div class="landing-actions">
                                 <a class="uk-button uk-button-primary" href="{{ route('explore') }}">Explore the tree →</a>
                                 <a class="uk-button uk-button-default" href="{{ $repositoryUrl }}">View on GitHub</a>
@@ -143,7 +143,7 @@
             <section class="landing-section landing-band" id="data">
                 <div class="uk-container uk-container-small">
                     <h2 class="landing-heading">Built on open data.</h2>
-                    <p>The whole dataset downloads in one go. Religions and gods are identified by slug, relations by their kind and two ends, and the file says which format version it speaks. Currently 2. Nothing in it depends on this app.</p>
+                    <p>The whole dataset downloads in one go. Religions and Gods are identified by slug, relations by their kind and two ends, and the file says which format version it speaks. Currently 2. Nothing in it depends on this app.</p>
                     <pre class="landing-code"><code>{
   "format": "comparative-mythology-family-tree",
   "format_version": 2,

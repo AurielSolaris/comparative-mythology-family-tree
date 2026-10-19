@@ -1,8 +1,10 @@
 # Comparative Mythology Family Tree
 
-A web app for exploring the family trees of gods, heroes and other mythological figures, and for comparing them across religions and pantheons.
+A web app for exploring the family trees of Gods, heroes and other mythological figures, and for comparing them across religions and pantheons.
 
 Visitors explore an interactive canvas: they can pan and zoom, search, open any entity's family, or put several religions side by side. Administrators add and edit the data through a separate dashboard.
+
+**Live site:** [comparative-mythology-static.vercel.app](https://comparative-mythology-static.vercel.app), a static, read-only build of the explorer that always reads the dataset from the latest release.
 
 ## Screenshots
 
@@ -31,8 +33,8 @@ A short introduction to the project, with links into the explorer and the export
   - Co-rulers (e.g. Kura and Barama at Ebla) are joined by a solid gold arc labelled *♛ co-rulers*.
   - Council/court membership is an arrow from the head to the member.
   - **Syncretism** is drawn as arcs below the pair (alternating above when one pair has several):
-    - equivalents (identified as one god, e.g. Vishnu ≈ Nārāyaṇa) as a blue dotted arc;
-    - cognates (descended from a common older god, e.g. Astarte and Ishtar) as a green dotted arc;
+    - equivalents (identified as one God, e.g. Vishnu ≈ Nārāyaṇa) as a blue dotted arc;
+    - cognates (descended from a common older God, e.g. Astarte and Ishtar) as a green dotted arc;
     - analogues (similar, with no known historical link) as a grey dotted arc;
     - the directed kinds as a purple dashed arrow from the source to the result, labelled with the kind: *fused into*, *absorbed into*, *avatar*, *form / aspect*, *later form*, *adopted as*, *name used for* (interpretation), *supplanted by*, *split into*, *demonized as* and *deified as*.
 
@@ -53,7 +55,7 @@ Anyone can download the whole dataset: visitors from the explorer's left panel, 
 | JSON | `/export/json` | `religions`, `entities` and `relations`; entities and relations each list their `sources` |
 | SQLite | `/export/sqlite` or `/export/db` | The same data as a standalone database with foreign keys. It has the tables `religions`, `entities`, `entity_religions`, `relations`, `sources` and `meta`. Both URLs return the same file; only the extension differs. |
 
-- **Identifiers.** Religions and entities are identified by their slug, and relations refer to entities by slug. A relation is identified by its `kind`, `from` and `to`. Directed syncretism kinds point from the source (`from`) to the result (`to`), e.g. a god to its avatar. The app's own database ids are not exported. The integer keys in the SQLite file only link its tables together and are numbered fresh for each export.
+- **Identifiers.** Religions and entities are identified by their slug, and relations refer to entities by slug. A relation is identified by its `kind`, `from` and `to`. Directed syncretism kinds point from the source (`from`) to the result (`to`), e.g. a God to its avatar. The app's own database ids are not exported. The integer keys in the SQLite file only link its tables together and are numbered fresh for each export.
 - **Role words.** Each relation includes `from_role` and `to_role`: the relation read from each end, in that entity's gendered words (e.g. `"Father of"` / `"Daughter of"`, `"Husband of"` / `"Wife of"`). They are computed from the entities' genders at export time. If you change a gender in an exported file, change these too; `gender` is the source of truth.
 - **Sources.** Each source has a `kind` (`link` or `file`), a `url` for links, and a `ref` for the line, verse or page cited. File sources give the file's path inside the download (`sources/…`) and its `original_name`. When any uploaded source files exist, the download becomes a zip (`…-json.zip`, `…-sqlite.zip`) holding the JSON or SQLite file plus a `sources/` folder; otherwise it is the plain file.
 - **Certainty and period.** Each relation has an optional `certainty` (`attested` in the tradition, scholarly `consensus`, scholarly `hypothesis`, or `disputed`) and a free-text `period` (e.g. `"Gupta period"`).

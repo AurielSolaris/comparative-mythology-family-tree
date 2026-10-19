@@ -244,7 +244,7 @@ class DatasetExport
             -- The other syncretism kinds (fusion, absorption, avatar, aspect,
             -- derivation, adoption, interpretation, supplanting, fission,
             -- demonization, deification) point from the source (entity_id)
-            -- to the result, e.g. a god to its avatar.
+            -- to the result, e.g. a God to its avatar.
             CREATE TABLE relations (
                 id INTEGER PRIMARY KEY,
                 kind TEXT NOT NULL,

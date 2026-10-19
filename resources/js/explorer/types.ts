@@ -54,8 +54,8 @@ export interface RoleView {
 /**
  * Parent edges point from parent to child, council edges from the head of
  * the council or court to the member, and directed syncretism edges from
- * the source to the result (a god to its avatar, a component to the fused
- * god…). Undirected edges have "from" as the entity drawn on the left.
+ * the source to the result (a God to its avatar, a component to the fused
+ * God…). Undirected edges have "from" as the entity drawn on the left.
  */
 export interface GraphEdge {
     id: number;
