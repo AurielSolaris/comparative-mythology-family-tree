@@ -28,18 +28,21 @@ A short introduction to the project, with links into the explorer and the export
 - **Relations.**
   - Parent → child lines are labelled *son*, *daughter* or *child*.
   - Consorts are joined by a double line, siblings by a dashed arc.
-  - Equivalents across religions (Zeus ≈ Jupiter) are joined by a dotted arc.
   - Co-rulers (e.g. Kura and Barama at Ebla) are joined by a solid gold arc labelled *♛ co-rulers*.
   - Council/court membership is an arrow from the head to the member.
+  - **Syncretism** is drawn as arcs below the pair (alternating above when one pair has several):
+    - equivalents (identified as one god, e.g. Vishnu ≈ Nārāyaṇa) as a blue dotted arc;
+    - cognates (descended from a common older god, e.g. Astarte and Ishtar) as a green dotted arc;
+    - analogues (similar, with no known historical link) as a grey dotted arc;
+    - the directed kinds as a purple dashed arrow from the source to the result, labelled with the kind: *fused into*, *absorbed into*, *avatar*, *form / aspect*, *later form*, *adopted as*, *name used for* (interpretation), *supplanted by*, *split into*, *demonized as* and *deified as*.
 
-  Each line carries its tradition and note when they are recorded (e.g. *son · Eblaite*). Labels are only drawn where there is room.
+  Each line carries its tradition, period and note when they are recorded (e.g. *son · Eblaite*). Links marked as a hypothesis or disputed are drawn fainter and say so in their label. Labels are only drawn where there is room.
 - **Search** by name, alias (including non-Latin scripts), element, region or origin, optionally filtered by gender and element.
-- **Browse a religion** to see all of its members. Entities that belong to several pantheons appear in each of them.
+- **Browse a religion** to see all of its members, plus the entities in other religions they are syncretically linked to. Entities that belong to several pantheons appear in each of them.
 - **Compare side by side.** Pick 2–4 religions and each one gets its own column. Generations line up across columns, so a parent in one pantheon still sits above a child in another. The link can be shared, e.g. `/compare?religions=eblaite,canaanite`.
-  - **"Is like" links.** An entity whose syncretic origin is also on the canvas gets a purple dashed arrow to it, with a pixel "twins" badge (e.g. Jupiter → Zeus). Hover the badge for a description.
 - **Depth control.** On an entity's page, choose how many relation hops around it are shown (1–4).
 - **Download as PNG.** The image button saves the whole tree as a PNG at 2× resolution, as currently arranged and without the background grid or drag area.
-- **Legend** listing every line style, the element icons, and (in comparisons) the "is like" link.
+- **Legend** listing every line style, including the syncretism kinds, and the element icons.
 
 ### Export
 
@@ -50,10 +53,11 @@ Anyone can download the whole dataset: visitors from the explorer's left panel, 
 | JSON | `/export/json` | `religions`, `entities` and `relations`; entities and relations each list their `sources` |
 | SQLite | `/export/sqlite` or `/export/db` | The same data as a standalone database with foreign keys. It has the tables `religions`, `entities`, `entity_religions`, `relations`, `sources` and `meta`. Both URLs return the same file; only the extension differs. |
 
-- **Identifiers.** Religions and entities are identified by their slug, and relations refer to entities by slug. A relation is identified by its `kind`, `from` and `to`. An entity's `syncretic_origin` is the slug of the entity it was syncretised from or most resembles. The app's own database ids are not exported. The integer keys in the SQLite file only link its tables together and are numbered fresh for each export.
+- **Identifiers.** Religions and entities are identified by their slug, and relations refer to entities by slug. A relation is identified by its `kind`, `from` and `to`. Directed syncretism kinds point from the source (`from`) to the result (`to`), e.g. a god to its avatar. The app's own database ids are not exported. The integer keys in the SQLite file only link its tables together and are numbered fresh for each export.
 - **Role words.** Each relation includes `from_role` and `to_role`: the relation read from each end, in that entity's gendered words (e.g. `"Father of"` / `"Daughter of"`, `"Husband of"` / `"Wife of"`). They are computed from the entities' genders at export time. If you change a gender in an exported file, change these too; `gender` is the source of truth.
 - **Sources.** Each source has a `kind` (`link` or `file`), a `url` for links, and a `ref` for the line, verse or page cited. File sources give the file's path inside the download (`sources/…`) and its `original_name`. When any uploaded source files exist, the download becomes a zip (`…-json.zip`, `…-sqlite.zip`) holding the JSON or SQLite file plus a `sources/` folder; otherwise it is the plain file.
-- **Versioning.** The file's `format_version` is currently 4. Version 3 added sources, `element` and `syncretic_origin`; version 4 adds the `co_ruler` relation kind.
+- **Certainty and period.** Each relation has an optional `certainty` (`attested` in the tradition, scholarly `consensus`, scholarly `hypothesis`, or `disputed`) and a free-text `period` (e.g. `"Gupta period"`).
+- **Versioning.** The file's `format_version` is currently 5. Version 3 added sources, `element` and `syncretic_origin`; version 4 added the `co_ruler` relation kind; version 5 replaces `syncretic_origin` with the syncretism relation kinds and adds each relation's `certainty` and `period`.
 - **Privacy.** Exports never include user accounts or other app internals.
 
 ### Admin dashboard (`/admin`)
@@ -61,10 +65,13 @@ Anyone can download the whole dataset: visitors from the explorer's left panel, 
 - **Religions** with an optional colour, used for node stripes, comparison columns and labels.
 - **Entities**, each with:
   - name, gender, element, region/area, origin and aliases (one per line);
-  - a primary religion, plus any other religions it also belongs to (e.g. *Baal*: Canaanite, also Eblaite);
-  - an optional **syncretic origin / most like**: another entity it was syncretised from or most resembles (e.g. Roman *Jupiter* → Greek *Zeus*). It can't point at itself, and is cleared if that entity is deleted.
+  - a primary religion, plus any other religions it also belongs to (e.g. *Baal*: Canaanite, also Eblaite).
 - **Filters** on the entity list by search text, religion, gender and element. The element field suggests elements already in use, to keep spellings consistent.
-- **Relations:** *parent/child*, *consort*, *sibling*, *equivalent*, *member of council/court* and *co-ruler*. Each relation can have an optional tradition and a note. Duplicates, self-links and contradictory links are rejected.
+- **Relations,** in two groups:
+  - *Family and rank:* parent/child, consort, sibling, member of council/court and co-ruler.
+  - *Syncretism and identity:* equivalent, cognate, analogue, fusion, absorption, avatar, form/aspect, later form, adoption, interpretation, supplanting, split, demonization and deification. The form shows what the chosen kind means. Directed kinds can be entered from either end ("Avatar of" / "Has as avatar").
+
+  Each relation can have an optional tradition, certainty (attested, scholarly consensus, scholarly hypothesis or disputed), period and note. Duplicates (including the same link entered from the other end), self-links and contradictory links are rejected.
 - **Drag-to-reorder** the entity list. This order is also the starting left-to-right order of siblings on the canvas.
 - **Switch sides (⇄).** While logged in as an admin, each consort or sibling pair on the canvas has a ⇄ button that swaps which one is drawn on the left.
 - **Sources.** Cite where the data comes from, on entities and on relations:
@@ -155,11 +162,11 @@ docker/             Apache, PHP and entrypoint config for the container image
 - **Religion:** name, slug and optional colour.
 - **Entity:**
   - name, slug, gender, element (free text), region, origin, aliases and manual position;
-  - a primary religion (`religion_id`) plus additional religions (the `entity_religion` table);
-  - an optional `syncretic_origin_id`: a foreign key to another entity, set to null if that entity is deleted.
-- **EntityRelation:** two entities, a kind, an optional tradition and an optional note.
+  - a primary religion (`religion_id`) plus additional religions (the `entity_religion` table).
+- **EntityRelation:** two entities, a kind, and an optional tradition, `certainty`, `period` and note.
   - *parent* and *council* are directional: `entity_id` is the parent, or the head of the council.
-  - *consort*, *sibling* and *equivalent* are symmetric and stored once, with the lower id first. `sides_swapped` records the admin's chosen left/right order.
+  - The directed syncretism kinds (*fusion*, *absorption*, *avatar*, *aspect*, *derivation*, *adoption*, *interpretation*, *supplanting*, *fission*, *demonization*, *deification*) store the source as `entity_id` and the result as `related_entity_id`.
+  - *consort*, *sibling*, *co_ruler*, *equivalent*, *cognate* and *analogue* are symmetric and stored once, with the lower id first. `sides_swapped` records the admin's chosen left/right order for the side-by-side kinds.
 - **Source:** a citation on an entity or a relation (polymorphic `sourceable`, stored as `entity` / `entity_relation`). It has a `kind` (`file` or `link`), a `url` or a stored `path` (with the uploaded `original_name`), and a `ref` for the line or verse. Files live on the private `local` disk under `sources/` and are deleted with their source. Deleting an entity also deletes its relations' sources.
 
 ### Graph endpoints (used by the canvas)
@@ -167,7 +174,7 @@ docker/             Apache, PHP and entrypoint config for the container image
 | Endpoint | Returns |
 | --- | --- |
 | `GET /graph/entities/{slug}?depth=1-4` | An entity and its neighbourhood |
-| `GET /graph/religions/{slug}` | A religion's members, plus their equivalents in other religions |
+| `GET /graph/religions/{slug}` | A religion's members, plus the entities in other religions they are syncretically linked to |
 | `GET /graph/compare?religions=a,b` | 2–4 religions as side-by-side columns |
 | `GET /search/suggestions?q=…&gender=…&element=…` | Search suggestions |
 | `GET /export/{json,sqlite,db}` | Download the whole dataset |

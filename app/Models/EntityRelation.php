@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RelationCertainty;
 use App\Enums\RelationKind;
 use App\Enums\RelationRole;
 use App\Models\Concerns\HasSources;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['entity_id', 'related_entity_id', 'kind', 'religion_id', 'note'])]
+#[Fillable(['entity_id', 'related_entity_id', 'kind', 'religion_id', 'certainty', 'period', 'note'])]
 class EntityRelation extends Model
 {
     use HasSources;
@@ -23,6 +24,7 @@ class EntityRelation extends Model
     {
         return [
             'kind' => RelationKind::class,
+            'certainty' => RelationCertainty::class,
             'sides_swapped' => 'boolean',
         ];
     }
@@ -38,7 +40,8 @@ class EntityRelation extends Model
 
     /**
      * The two entity ids in the order the tree draws them, left to right.
-     * Directional relations are always superior (parent, council head) first.
+     * Directional relations are always superior (parent, council head,
+     * source of a syncretism) first.
      *
      * @return array{0: int, 1: int}
      */
@@ -101,15 +104,6 @@ class EntityRelation extends Model
      */
     public function roleFor(Entity $entity): RelationRole
     {
-        $isSuperior = $this->entity_id === $entity->id;
-
-        return match ($this->kind) {
-            RelationKind::Parent => $isSuperior ? RelationRole::ParentOf : RelationRole::ChildOf,
-            RelationKind::Council => $isSuperior ? RelationRole::CouncilHeadOf : RelationRole::CouncilMemberOf,
-            RelationKind::Consort => RelationRole::ConsortOf,
-            RelationKind::Sibling => RelationRole::SiblingOf,
-            RelationKind::Equivalent => RelationRole::EquivalentOf,
-            RelationKind::CoRuler => RelationRole::CoRulerOf,
-        };
+        return RelationRole::for($this->kind, $this->entity_id === $entity->id);
     }
 }

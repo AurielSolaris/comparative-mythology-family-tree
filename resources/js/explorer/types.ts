@@ -1,4 +1,23 @@
-export type RelationKind = 'parent' | 'consort' | 'sibling' | 'equivalent' | 'council' | 'co_ruler';
+export type RelationKind =
+    | 'parent'
+    | 'consort'
+    | 'sibling'
+    | 'council'
+    | 'co_ruler'
+    | 'equivalent'
+    | 'cognate'
+    | 'analogue'
+    | 'fusion'
+    | 'absorption'
+    | 'avatar'
+    | 'aspect'
+    | 'derivation'
+    | 'adoption'
+    | 'interpretation'
+    | 'supplanting'
+    | 'fission'
+    | 'demonization'
+    | 'deification';
 
 export interface ReligionRef {
     name: string;
@@ -17,8 +36,6 @@ export interface GraphNode {
     otherReligions: ReligionRef[];
     gender: { value: string; label: string; symbol: string } | null;
     element: string | null;
-    /** The entity this one was syncretised from or is most like. */
-    syncreticOrigin: { id: number; name: string; religion: string; url: string; graphUrl: string } | null;
     region: string | null;
     origin: string | null;
     aliases: string[];
@@ -28,19 +45,34 @@ export interface GraphNode {
     graphUrl: string;
 }
 
+/** The relation read from one end: "Avatar of", "Daughter of"…, and its place in a list of relatives. */
+export interface RoleView {
+    label: string;
+    order: number;
+}
+
 /**
  * Parent edges point from parent to child, council edges from the head of
- * the council or court to the member. The other kinds are undirected; for
- * them "from" is the entity drawn on the left.
+ * the council or court to the member, and directed syncretism edges from
+ * the source to the result (a god to its avatar, a component to the fused
+ * god…). Undirected edges have "from" as the entity drawn on the left.
  */
 export interface GraphEdge {
     id: number;
     from: number;
     to: number;
     kind: RelationKind;
+    /** Identity links (equivalents, fusions, avatars…) rather than family or rank. */
+    syncretic: boolean;
+    directed: boolean;
     /** The tradition (religion name) the relation comes from, if recorded. */
     tradition: string | null;
+    certainty: { value: 'attested' | 'consensus' | 'hypothesis' | 'disputed'; label: string } | null;
+    /** When the relation held, e.g. "Gupta period". */
+    period: string | null;
     note: string | null;
+    fromRole: RoleView;
+    toRole: RoleView;
     /** Whether admins can switch which side each entity is drawn on. */
     swappable: boolean;
 }

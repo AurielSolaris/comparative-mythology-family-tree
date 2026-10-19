@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\RelationCertainty;
 use App\Enums\RelationKind;
 use App\Models\Entity;
 use App\Models\EntityRelation;
@@ -35,13 +36,14 @@ class DatasetExportTest extends TestCase
         $this->el = Entity::factory()->for($this->canaanite)->create(['name' => 'El', 'gender' => 'male', 'element' => 'Sky', 'aliases' => ['Ilu', 'ʾĒl']]);
         $this->baal = Entity::factory()->for($this->canaanite)->create(['name' => 'Baal']);
         $this->baal->additionalReligions()->attach($eblaite);
-        $this->el->update(['syncretic_origin_id' => $this->baal->id]);
 
         EntityRelation::create([
             'entity_id' => $this->el->id,
             'related_entity_id' => $this->baal->id,
             'kind' => RelationKind::Council,
             'religion_id' => $this->canaanite->id,
+            'certainty' => RelationCertainty::Attested,
+            'period' => 'Late Bronze Age',
             'note' => 'divine assembly',
         ]);
 
@@ -58,7 +60,7 @@ class DatasetExportTest extends TestCase
         $content = $response->streamedContent();
         $data = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
 
-        $this->assertSame(4, $data['format_version']);
+        $this->assertSame(5, $data['format_version']);
         $this->assertSame(['Canaanite', 'Eblaite'], array_column($data['religions'], 'name'));
         $this->assertSame('#aa8800', $data['religions'][0]['color']);
 
@@ -68,13 +70,13 @@ class DatasetExportTest extends TestCase
         $this->assertSame(['Ilu', 'ʾĒl'], collect($data['entities'])->firstWhere('name', 'El')['aliases']);
         $this->assertSame('Sky', collect($data['entities'])->firstWhere('name', 'El')['element']);
         $this->assertNull($baal['element']);
-        $this->assertSame('baal', collect($data['entities'])->firstWhere('name', 'El')['syncretic_origin']);
-        $this->assertNull($baal['syncretic_origin']);
+        $this->assertArrayNotHasKey('syncretic_origin', $baal);
 
         $this->assertSame([[
             'kind' => 'council', 'from' => 'el', 'to' => 'baal',
             'from_role' => 'Council/court includes', 'to_role' => 'Member of the council/court of',
-            'tradition' => 'canaanite', 'note' => 'divine assembly', 'sides_swapped' => false, 'sources' => [],
+            'tradition' => 'canaanite', 'certainty' => 'attested', 'period' => 'Late Bronze Age',
+            'note' => 'divine assembly', 'sides_swapped' => false, 'sources' => [],
         ]], $data['relations']);
 
         // The app's database ids are not exported; slugs identify everything.
@@ -115,9 +117,7 @@ class DatasetExportTest extends TestCase
             )->fetch(PDO::FETCH_NUM));
             $this->assertSame('["Ilu","ʾĒl"]', $database->query("SELECT aliases FROM entities WHERE name = 'El'")->fetchColumn());
             $this->assertSame('Sky', $database->query("SELECT element FROM entities WHERE name = 'El'")->fetchColumn());
-            $this->assertSame('Baal', $database->query(
-                "SELECT origin.name FROM entities e JOIN entities origin ON origin.id = e.syncretic_origin_id WHERE e.name = 'El'",
-            )->fetchColumn());
+            $this->assertSame(['attested', 'Late Bronze Age'], $database->query('SELECT certainty, period FROM relations')->fetch(PDO::FETCH_NUM));
             $this->assertSame([], $database->query('PRAGMA foreign_key_check')->fetchAll());
             $this->assertFalse((bool) $database->query("SELECT 1 FROM sqlite_master WHERE name = 'users'")->fetchColumn());
 

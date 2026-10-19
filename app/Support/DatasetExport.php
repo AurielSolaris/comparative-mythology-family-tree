@@ -36,8 +36,12 @@ class DatasetExport
      * 2: dropped the app's database ids from the JSON; SQLite keys are local to the file.
      * 3: added sources on entities and relations, and the entities' element and syncretic origin.
      * 4: added the co_ruler relation kind.
+     * 5: replaced the entities' syncretic origin with syncretism relation kinds
+     *    (cognate, analogue, fusion, absorption, avatar, aspect, derivation,
+     *    adoption, interpretation, supplanting, fission, demonization,
+     *    deification), and added each relation's certainty and period.
      */
-    public const FORMAT_VERSION = 4;
+    public const FORMAT_VERSION = 5;
 
     /**
      * @return array{format: string, format_version: int, exported_at: string, religions: list<array<string, mixed>>, entities: list<array<string, mixed>>, relations: list<array<string, mixed>>}
@@ -65,7 +69,6 @@ class DatasetExport
                 'name' => $entity->name,
                 'gender' => $entity->gender?->value,
                 'element' => $entity->element,
-                'syncretic_origin' => $entity->syncretic_origin_id ? $entitySlugs[$entity->syncretic_origin_id] : null,
                 'religion' => $slugs[$entity->religion_id],
                 'also_religions' => $entity->additionalReligions->map(fn (Religion $religion) => $slugs[$religion->id])->values()->all(),
                 'region' => $entity->region,
@@ -81,6 +84,8 @@ class DatasetExport
                 'from_role' => $this->roleLabel($relation, $entitiesById[$relation->entity_id]),
                 'to_role' => $this->roleLabel($relation, $entitiesById[$relation->related_entity_id]),
                 'tradition' => $relation->religion_id ? $slugs[$relation->religion_id] : null,
+                'certainty' => $relation->certainty?->value,
+                'period' => $relation->period,
                 'note' => $relation->note,
                 'sides_swapped' => $relation->sides_swapped,
                 'sources' => $this->sourcesArray($relation->sources),
@@ -220,7 +225,6 @@ class DatasetExport
                 name TEXT NOT NULL,
                 gender TEXT,
                 element TEXT,
-                syncretic_origin_id INTEGER REFERENCES entities (id), -- the entity it was syncretised from / is most like
                 religion_id INTEGER NOT NULL REFERENCES religions (id),
                 region TEXT,
                 origin TEXT,
@@ -236,7 +240,11 @@ class DatasetExport
             );
 
             -- parent and council: entity_id is the parent / head of the council.
-            -- consort, sibling, equivalent and co_ruler are symmetric.
+            -- consort, sibling, co_ruler, equivalent, cognate and analogue are symmetric.
+            -- The other syncretism kinds (fusion, absorption, avatar, aspect,
+            -- derivation, adoption, interpretation, supplanting, fission,
+            -- demonization, deification) point from the source (entity_id)
+            -- to the result, e.g. a god to its avatar.
             CREATE TABLE relations (
                 id INTEGER PRIMARY KEY,
                 kind TEXT NOT NULL,
@@ -245,6 +253,8 @@ class DatasetExport
                 from_role TEXT NOT NULL, -- e.g. 'Father of', read from entity_id (derived from gender)
                 to_role TEXT NOT NULL,   -- e.g. 'Daughter of', read from related_entity_id
                 tradition_religion_id INTEGER REFERENCES religions (id),
+                certainty TEXT, -- 'attested', 'consensus', 'hypothesis' or 'disputed'
+                period TEXT,    -- e.g. 'Gupta period'
                 note TEXT,
                 sides_swapped INTEGER NOT NULL DEFAULT 0,
                 UNIQUE (kind, entity_id, related_entity_id)
@@ -306,21 +316,14 @@ class DatasetExport
             }
         }
 
-        // Origins can point at entities inserted after them, so they're filled in once all exist.
-        $setOrigin = $database->prepare('UPDATE entities SET syncretic_origin_id = ? WHERE id = ?');
-        foreach ($data['entities'] as $entity) {
-            if ($entity['syncretic_origin'] !== null) {
-                $setOrigin->execute([$entityIds[$entity['syncretic_origin']], $entityIds[$entity['slug']]]);
-            }
-        }
-
         $insertRelation = $database->prepare(
-            'INSERT INTO relations (kind, entity_id, related_entity_id, from_role, to_role, tradition_religion_id, note, sides_swapped) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO relations (kind, entity_id, related_entity_id, from_role, to_role, tradition_religion_id, certainty, period, note, sides_swapped) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         );
         foreach ($data['relations'] as $relation) {
             $insertRelation->execute([
                 $relation['kind'], $entityIds[$relation['from']], $entityIds[$relation['to']], $relation['from_role'], $relation['to_role'],
-                $relation['tradition'] ? $religionIds[$relation['tradition']] : null, $relation['note'], (int) $relation['sides_swapped'],
+                $relation['tradition'] ? $religionIds[$relation['tradition']] : null, $relation['certainty'], $relation['period'],
+                $relation['note'], (int) $relation['sides_swapped'],
             ]);
             $relationId = (int) $database->lastInsertId();
 

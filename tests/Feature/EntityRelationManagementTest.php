@@ -79,6 +79,42 @@ class EntityRelationManagementTest extends TestCase
         $this->relate($this->zeus, 'consort_of', $this->zeus)->assertSessionHasErrors('related_entity_id');
     }
 
+    public function test_a_syncretism_is_stored_from_source_to_result_with_its_certainty_and_period(): void
+    {
+        $this->relate($this->apollo, 'avatar_of', $this->zeus, 'in one late source', ['certainty' => 'disputed', 'period' => 'Hellenistic'])
+            ->assertRedirect(route('admin.entities.edit', $this->apollo).'#relations');
+
+        $this->assertDatabaseHas('entity_relations', [
+            'entity_id' => $this->zeus->id,
+            'related_entity_id' => $this->apollo->id,
+            'kind' => RelationKind::Avatar->value,
+            'certainty' => 'disputed',
+            'period' => 'Hellenistic',
+            'note' => 'in one late source',
+        ]);
+
+        $this->get(route('admin.entities.edit', $this->apollo))->assertOk()->assertSee('Avatar of')->assertSee('Disputed')->assertSee('Hellenistic');
+        $this->get(route('admin.entities.edit', $this->zeus))->assertOk()->assertSee('Has as avatar');
+    }
+
+    public function test_a_syncretism_added_again_from_the_other_end_is_rejected(): void
+    {
+        $this->relate($this->apollo, 'avatar_of', $this->zeus)->assertSessionHasNoErrors();
+
+        $this->relate($this->zeus, 'has_avatar', $this->apollo)
+            ->assertSessionHasErrors(['related_entity_id' => 'This relation already exists.']);
+
+        $this->assertDatabaseCount('entity_relations', 1);
+    }
+
+    public function test_the_certainty_must_be_one_of_the_listed_ones(): void
+    {
+        $this->relate($this->apollo, 'cognate_of', $this->zeus, null, ['certainty' => 'probably'])
+            ->assertSessionHasErrors(['certainty' => 'Choose a certainty from the list.']);
+
+        $this->assertDatabaseCount('entity_relations', 0);
+    }
+
     public function test_the_role_must_be_valid(): void
     {
         $this->relate($this->zeus, 'cousin_of', $this->apollo)->assertSessionHasErrors('role');
@@ -139,12 +175,16 @@ class EntityRelationManagementTest extends TestCase
         $this->assertFalse($relation->fresh()->sides_swapped);
     }
 
-    private function relate(Entity $entity, string $role, Entity $other, ?string $note = null): TestResponse
+    /**
+     * @param  array{certainty?: string, period?: string}  $extra
+     */
+    private function relate(Entity $entity, string $role, Entity $other, ?string $note = null, array $extra = []): TestResponse
     {
         return $this->post(route('admin.entities.relations.store', $entity), [
             'role' => $role,
             'related_entity_id' => $other->id,
             'note' => $note,
+            ...$extra,
         ]);
     }
 }

@@ -246,14 +246,14 @@ export function elementSprite(element: string | null): HTMLCanvasElement | null 
     return icon ? render(icon) : null;
 }
 
-/** The pixel icon on "is like" (syncretic origin) links. */
+/** The pixel "twins" icon heading the syncretism part of the legend. */
 export function likenessSprite(): HTMLCanvasElement {
     return render('twins');
 }
 
 /**
  * Paints the legend's <canvas data-legend-icon="…"> elements: an element
- * name (e.g. "Storm"), or "likeness" for the "is like" badge.
+ * name (e.g. "Storm"), or "likeness" for the twins icon.
  */
 export function paintLegendIcons(root: ParentNode, pixel = 2): void {
     const ratio = window.devicePixelRatio || 1;

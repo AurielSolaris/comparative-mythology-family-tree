@@ -73,43 +73,6 @@
 </div>
 </div>
 
-@php($syncreticOrigin = old('syncretic_origin_id') !== null ? App\Models\Entity::query()->with('religion')->find(old('syncretic_origin_id')) : ($entity->exists ? $entity->syncreticOrigin : null))
-
-<div x-data="entityPicker(@js([
-    'suggestUrl' => route('search.suggestions'),
-    'excludeId' => $entity->id,
-    'selected' => $syncreticOrigin ? ['id' => $syncreticOrigin->id, 'label' => "{$syncreticOrigin->name} ({$syncreticOrigin->religion->name})"] : null,
-]))">
-    <x-admin.field label="Syncretic origin / most like" for="syncretic-origin-search" error="syncretic_origin_id" help="The entity this one was syncretised from or most resembles, e.g. Roman Jupiter → Greek Zeus. Clear the field to remove it.">
-        <div class="uk-inline uk-width-1-1" @click.outside="open = false">
-            <span class="uk-form-icon" uk-icon="search"></span>
-            <input @class(['uk-input', 'uk-form-danger' => $errors->has('syncretic_origin_id')])
-                   id="syncretic-origin-search" type="search" autocomplete="off" placeholder="Search by name or alias"
-                   x-model="query"
-                   @input.debounce.250ms="search"
-                   @keydown.arrow-down.prevent="move(1)"
-                   @keydown.arrow-up.prevent="move(-1)"
-                   @keydown.enter="if (open) { $event.preventDefault(); chooseHighlighted() }"
-                   @keydown.escape="open = false">
-            <input type="hidden" name="syncretic_origin_id" :value="selectedId">
-
-            <div class="uk-drop uk-dropdown uk-width-1-1 uk-margin-small-top" :class="{ 'uk-open': open }">
-                <ul class="uk-nav uk-dropdown-nav">
-                    <template x-for="(result, index) in results" :key="result.id">
-                        <li :class="{ 'uk-active': index === highlighted }">
-                            <a href="#" @click.prevent="choose(result)" @mouseenter="highlighted = index">
-                                <span x-text="result.name"></span>
-                                <div class="uk-nav-subtitle" x-text="result.religion"></div>
-                            </a>
-                        </li>
-                    </template>
-                    <li class="uk-nav-header" x-show="results.length === 0">No matches</li>
-                </ul>
-            </div>
-        </div>
-    </x-admin.field>
-</div>
-
 <x-admin.field label="Origin" for="origin" help="Where or how the entity came to be, e.g. “Born from the sea foam off Cythera”.">
     <textarea @class(['uk-textarea', 'uk-form-danger' => $errors->has('origin')]) id="origin" name="origin" rows="3" maxlength="5000">{{ old('origin', $entity->origin) }}</textarea>
 </x-admin.field>

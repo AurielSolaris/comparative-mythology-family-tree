@@ -1,4 +1,4 @@
-import { elementSprite, likenessSprite } from './elements';
+import { elementSprite } from './elements';
 import { COLUMN_GAP, CONSORT_GAP, type Lane, layoutGraph, NODE_HEIGHT, NODE_WIDTH, ROW_GAP } from './layout';
 import { childWord, pairWords } from './terms';
 import type { Graph, GraphEdge, GraphNode, Point, ReligionRef } from './types';
@@ -11,13 +11,15 @@ export const COLORS = {
     muted: '#999999',
     border: '#e5e5e5',
     primary: '#1e87f0',
-    likeness: '#7c4dff',
     area: '#cfe2f6',
     areaFill: 'rgba(30, 135, 240, 0.03)',
     parent: '#b4b4b4',
     consort: '#f0506e',
     sibling: '#999999',
     equivalent: '#1e87f0',
+    cognate: '#32a852',
+    analogue: '#8c8c8c',
+    syncretism: '#7c4dff',
     council: '#faa05a',
     coRuler: '#c8962e',
 };
@@ -30,12 +32,26 @@ const FONT = '"Instrument Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", 
 const LABEL_MAX_WIDTH = 170;
 const LABEL_MIN_SCALE = 0.45;
 
+/** Edge labels; directed syncretism reads from the source to the result, along the arrow. */
 const KIND_LABELS: Record<Exclude<GraphEdge['kind'], 'parent'>, string> = {
     consort: 'consort',
     sibling: 'siblings',
-    equivalent: '≈ equivalent',
     council: 'council/court',
     co_ruler: '♛ co-rulers',
+    equivalent: '≈ equivalent',
+    cognate: '⑂ cognates',
+    analogue: '∼ analogues',
+    fusion: 'fused into',
+    absorption: 'absorbed into',
+    avatar: 'avatar',
+    aspect: 'form / aspect',
+    derivation: 'later form',
+    adoption: 'adopted as',
+    interpretation: 'name used for',
+    supplanting: 'supplanted by',
+    fission: 'split into',
+    demonization: 'demonized as',
+    deification: 'deified as',
 };
 
 /**
@@ -49,7 +65,6 @@ const AREA_MIN_PADDING = 32;
 const ARROW_SIZE = 7;
 /** Size of one element-icon pixel on the canvas, at 100% zoom. */
 const ELEMENT_PIXEL = 2;
-const LIKENESS_BADGE_RADIUS = 14;
 /** Room above the top row of a comparison for the religion titles. */
 const LANE_HEADER = 70;
 const LANE_PADDING = 40;
@@ -86,17 +101,6 @@ interface SwapButton {
     at: Point;
 }
 
-/** An "is like" link from an entity to its syncretic origin, drawn in comparisons. */
-interface Likeness {
-    from: number;
-    to: number;
-}
-
-interface LikenessBadge {
-    likeness: Likeness;
-    at: Point;
-}
-
 const SWAP_BUTTON_RADIUS = 11;
 
 /**
@@ -120,8 +124,6 @@ export class TreeCanvas {
     private hoverId: number | null = null;
     private swapButtons: SwapButton[] = [];
     private hoverSwapId: number | null = null;
-    private likenesses: Likeness[] = [];
-    private likenessBadges: LikenessBadge[] = [];
 
     /** Screen space covered by floating panels, kept clear when fitting. */
     private insets = { top: 0, right: 0, bottom: 0, left: 0 };
@@ -169,11 +171,6 @@ export class TreeCanvas {
         this.positions = layout.positions;
         this.lanes = layout.lanes;
         this.nodes = new Map((graph?.nodes ?? []).map((node) => [node.id, node]));
-        this.likenesses = this.lanes.length
-            ? (graph?.nodes ?? [])
-                  .filter((node) => node.syncreticOrigin && node.syncreticOrigin.id !== node.id && this.nodes.has(node.syncreticOrigin.id))
-                  .map((node) => ({ from: node.id, to: node.syncreticOrigin!.id }))
-            : [];
         this.area = this.positions.size ? padArea(this.contentBounds()) : null;
         this.hoverId = null;
         this.hoverSwapId = null;
@@ -310,12 +307,7 @@ export class TreeCanvas {
 
             this.setHover(button ? null : (this.nodeAt(point)?.id ?? null), button?.edge.id ?? null);
 
-            const badge = button ? null : this.likenessBadgeAt(point);
-
-            if (badge) {
-                const name = (id: number) => this.nodes.get(id)?.name ?? '';
-                this.canvas.title = `${name(badge.likeness.from)} is like ${name(badge.likeness.to)} (syncretic origin)`;
-            } else if (!button) {
+            if (!button) {
                 this.canvas.title = '';
             }
 
@@ -463,9 +455,6 @@ export class TreeCanvas {
         const ys = [...this.positions.values()].map((point) => point.y);
         const lanePadding = this.lanes.length ? LANE_PADDING : 0;
         const apexes = [
-            ...this.likenesses.map((likeness) =>
-                arcApex(this.positions.get(likeness.from)!, this.positions.get(likeness.to)!, this.likenessSide(likeness)).y,
-            ),
             ...(this.graph?.edges ?? []).flatMap((edge) => {
                 const side = this.arcSide(edge);
                 const from = this.positions.get(edge.from);
@@ -474,7 +463,7 @@ export class TreeCanvas {
                 return side && from && to ? [arcApex(from, to, side).y] : [];
             }),
         ];
-        const reach = Math.max(LIKENESS_BADGE_RADIUS, LABEL_HEIGHT / 2);
+        const reach = LABEL_HEIGHT / 2;
 
         return {
             left: Math.min(...xs) - NODE_WIDTH / 2 - lanePadding,
@@ -500,26 +489,27 @@ export class TreeCanvas {
             case 'sibling':
             case 'co_ruler':
                 return -1;
-            case 'equivalent':
-                return 1;
             case 'consort':
                 return areAdjacentPartners(from, to) ? null : -1;
             case 'council':
                 return to.y - from.y < NODE_HEIGHT ? -1 : null;
             default:
-                return null;
+                return edge.syncretic ? this.syncreticSide(edge) : null;
         }
     }
 
-    /** Below the pair (1), or above (-1) when an equivalent arc already runs below. */
-    private likenessSide(likeness: Likeness): -1 | 1 {
-        const hasEquivalent = (this.graph?.edges ?? []).some(
-            (edge) =>
-                edge.kind === 'equivalent' &&
-                ((edge.from === likeness.from && edge.to === likeness.to) || (edge.from === likeness.to && edge.to === likeness.from)),
+    /**
+     * Syncretism arcs run below the pair; when one pair has several (say
+     * cognates that were later equated), they alternate below and above.
+     */
+    private syncreticSide(edge: GraphEdge): -1 | 1 {
+        const samePair = (this.graph?.edges ?? []).filter(
+            (other) =>
+                other.syncretic &&
+                ((other.from === edge.from && other.to === edge.to) || (other.from === edge.to && other.to === edge.from)),
         );
 
-        return hasEquivalent ? -1 : 1;
+        return samePair.indexOf(edge) % 2 === 0 ? 1 : -1;
     }
 
     /**
@@ -666,10 +656,6 @@ export class TreeCanvas {
             }
         }
 
-        this.likenessBadges = this.likenesses.map((likeness) =>
-            this.drawLikeness(likeness, likeness.from === active || likeness.to === active),
-        );
-
         // The node being dragged is drawn last, on top of the others.
         const dragged = this.nodeDrag?.moved ? this.nodeDrag.id : null;
 
@@ -693,70 +679,6 @@ export class TreeCanvas {
         for (const button of this.swapButtons) {
             this.drawSwapButton(button);
         }
-
-        for (const badge of this.likenessBadges) {
-            this.drawLikenessBadge(badge);
-        }
-    }
-
-    /**
-     * A dashed purple arc with an arrow from an entity to the entity it
-     * "is like" (its syncretic origin). Bends below the pair, or above when
-     * an equivalent arc already runs below. Returns where its badge goes.
-     */
-    private drawLikeness(likeness: Likeness, highlighted: boolean): LikenessBadge {
-        const context = this.context;
-        const from = this.positions.get(likeness.from)!;
-        const to = this.positions.get(likeness.to)!;
-        const side = this.likenessSide(likeness);
-
-        context.save();
-        context.strokeStyle = COLORS.likeness;
-        context.fillStyle = COLORS.likeness;
-        context.lineWidth = highlighted ? 2.5 : 1.5;
-        context.globalAlpha = highlighted || this.hoverId === null ? 1 : 0.75;
-        context.setLineDash([10, 5]);
-
-        const [middle] = this.drawArc(from, to, side);
-
-        this.drawArrowhead({ x: to.x, y: to.y + (side * NODE_HEIGHT) / 2 }, side === 1 ? -Math.PI / 2 : Math.PI / 2);
-        context.restore();
-
-        return { likeness, at: middle };
-    }
-
-    /** A round badge with the pixel "twins" icon, in the middle of an "is like" link. */
-    private drawLikenessBadge(badge: LikenessBadge): void {
-        const context = this.context;
-        const sprite = likenessSprite();
-        const width = sprite.width * ELEMENT_PIXEL;
-        const height = sprite.height * ELEMENT_PIXEL;
-
-        context.save();
-        context.shadowColor = 'rgba(0, 0, 0, 0.12)';
-        context.shadowBlur = 6;
-        context.fillStyle = COLORS.background;
-        context.beginPath();
-        context.arc(badge.at.x, badge.at.y, LIKENESS_BADGE_RADIUS, 0, Math.PI * 2);
-        context.fill();
-        context.restore();
-
-        context.save();
-        context.strokeStyle = COLORS.likeness;
-        context.lineWidth = 1.5;
-        context.beginPath();
-        context.arc(badge.at.x, badge.at.y, LIKENESS_BADGE_RADIUS, 0, Math.PI * 2);
-        context.stroke();
-        context.imageSmoothingEnabled = false;
-        context.drawImage(sprite, badge.at.x - width / 2, badge.at.y - height / 2, width, height);
-        context.restore();
-    }
-
-    private likenessBadgeAt(screen: Point): LikenessBadge | null {
-        const x = (screen.x - this.offset.x) / this.scale;
-        const y = (screen.y - this.offset.y) / this.scale;
-
-        return this.likenessBadges.find((badge) => Math.hypot(x - badge.at.x, y - badge.at.y) <= LIKENESS_BADGE_RADIUS + 2) ?? null;
     }
 
     /**
@@ -1002,12 +924,8 @@ export class TreeCanvas {
                 context.lineWidth += 0.5;
                 candidates = this.drawArc(from, to, -1);
                 break;
-            case 'equivalent':
-                color = COLORS.equivalent;
-                context.strokeStyle = color;
-                context.setLineDash([2, 5]);
-                context.lineCap = 'round';
-                candidates = this.drawArc(from, to, 1);
+            default:
+                ({ candidates, color } = this.drawSyncreticEdge(edge, from, to));
                 break;
         }
 
@@ -1019,9 +937,50 @@ export class TreeCanvas {
                 : edge.kind === 'consort' || edge.kind === 'sibling'
                   ? pairWords(edge.kind, ...this.leftToRight(edge))
                   : KIND_LABELS[edge.kind];
-        const text = [kind, edge.tradition, edge.note].filter(Boolean).join(' · ');
+        const doubt = edge.certainty?.value === 'hypothesis' || edge.certainty?.value === 'disputed' ? edge.certainty.value : null;
+        const text = [kind, doubt, edge.tradition, edge.period, edge.note].filter(Boolean).join(' · ');
 
         return { candidates, text, color: edge.kind === 'parent' ? COLORS.muted : color, maxWidth };
+    }
+
+    /**
+     * Equivalents as blue dots, cognates green, analogues grey; the other
+     * (directed) kinds as a dashed purple arc with an arrow at the result.
+     * Hypotheses and disputed links are drawn fainter. Expects the line
+     * width and alpha already set; returns label spots and the colour.
+     */
+    private drawSyncreticEdge(edge: GraphEdge, from: Point, to: Point): { candidates: Point[]; color: string } {
+        const context = this.context;
+        const side = this.syncreticSide(edge);
+        const colors: Partial<Record<GraphEdge['kind'], string>> = {
+            equivalent: COLORS.equivalent,
+            cognate: COLORS.cognate,
+            analogue: COLORS.analogue,
+        };
+        const color = colors[edge.kind] ?? COLORS.syncretism;
+
+        if (edge.certainty?.value === 'hypothesis' || edge.certainty?.value === 'disputed') {
+            context.globalAlpha *= 0.55;
+        }
+
+        context.strokeStyle = color;
+        context.fillStyle = color;
+
+        if (edge.directed) {
+            context.setLineDash([10, 5]);
+        } else {
+            context.setLineDash(edge.kind === 'analogue' ? [1, 7] : [2, 5]);
+            context.lineCap = 'round';
+        }
+
+        const candidates = this.drawArc(from, to, side);
+
+        if (edge.directed) {
+            context.setLineDash([]);
+            this.drawArrowhead({ x: to.x, y: to.y + (side * NODE_HEIGHT) / 2 }, side === 1 ? -Math.PI / 2 : Math.PI / 2);
+        }
+
+        return { candidates, color };
     }
 
     /** The edge's two entities in the order they are drawn, left first. */

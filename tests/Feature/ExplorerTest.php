@@ -110,19 +110,31 @@ class ExplorerTest extends TestCase
             ->assertJsonPath('data.0.name', 'Zeus');
     }
 
-    public function test_nodes_include_their_syncretic_origin(): void
+    public function test_syncretism_edges_point_from_source_to_result_and_read_from_both_ends(): void
     {
-        $this->jupiter->update(['syncretic_origin_id' => $this->zeus->id]);
+        $this->zeus->update(['gender' => 'male']);
+        $this->apollo->update(['gender' => 'male']);
+        EntityRelation::create([
+            'entity_id' => $this->zeus->id,
+            'related_entity_id' => $this->jupiter->id,
+            'kind' => RelationKind::Adoption,
+            'certainty' => 'hypothesis',
+            'period' => 'Early Republic',
+        ]);
 
-        $this->getJson(route('graph.entities', $this->zeus))
-            ->assertJsonFragment(['name' => 'Jupiter', 'syncreticOrigin' => [
-                'id' => $this->zeus->id,
-                'name' => 'Zeus',
-                'religion' => 'Greek',
-                'url' => route('entities.show', $this->zeus),
-                'graphUrl' => route('graph.entities', $this->zeus),
-            ]])
-            ->assertJsonFragment(['name' => 'Zeus', 'syncreticOrigin' => null]);
+        $edges = collect($this->getJson(route('graph.entities', $this->zeus))->assertOk()->json('edges'));
+        $adoption = $edges->firstWhere('kind', 'adoption');
+
+        $this->assertSame([$this->zeus->id, $this->jupiter->id], [$adoption['from'], $adoption['to']]);
+        $this->assertTrue($adoption['syncretic']);
+        $this->assertTrue($adoption['directed']);
+        $this->assertSame(['value' => 'hypothesis', 'label' => 'Scholarly hypothesis'], $adoption['certainty']);
+        $this->assertSame('Early Republic', $adoption['period']);
+        $this->assertSame(['Adopted elsewhere as', 'Adopted from'], [$adoption['fromRole']['label'], $adoption['toRole']['label']]);
+
+        $parent = $edges->firstWhere('to', $this->apollo->id);
+        $this->assertFalse($parent['syncretic']);
+        $this->assertSame(['Father of', 'Son of'], [$parent['fromRole']['label'], $parent['toRole']['label']]);
     }
 
     public function test_the_depth_is_limited(): void
@@ -140,6 +152,16 @@ class ExplorerTest extends TestCase
             array_column($response->json('nodes'), 'name'),
         );
         $this->assertCount(4, $response->json('edges'));
+    }
+
+    public function test_the_religion_graph_includes_entities_linked_by_any_kind_of_syncretism(): void
+    {
+        $aplu = Entity::factory()->for(Religion::factory()->create(['name' => 'Etruscan']))->create(['name' => 'Aplu']);
+        $this->relate($this->apollo, $aplu, RelationKind::Adoption);
+
+        $response = $this->getJson(route('graph.religions', $this->greek))->assertOk();
+
+        $this->assertContains('Aplu', array_column($response->json('nodes'), 'name'));
     }
 
     public function test_suggestions_match_names_and_unicode_aliases(): void

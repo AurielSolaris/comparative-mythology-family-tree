@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\RelationCertainty;
 use App\Enums\RelationRole;
 use App\Models\Entity;
 use App\Models\EntityRelation;
@@ -26,6 +27,8 @@ class StoreEntityRelationRequest extends FormRequest
                 Rule::notIn([$this->entity()->id]),
             ],
             'religion_id' => ['nullable', 'integer', Rule::exists('religions', 'id')],
+            'certainty' => ['nullable', Rule::enum(RelationCertainty::class)],
+            'period' => ['nullable', 'string', 'max:255'],
             'note' => ['nullable', 'string', 'max:255'],
         ];
     }
@@ -73,6 +76,7 @@ class StoreEntityRelationRequest extends FormRequest
             'related_entity_id.required' => 'Choose an entity from the search results.',
             'related_entity_id.not_in' => 'An entity cannot be related to itself.',
             'religion_id.exists' => 'Choose a tradition from the list.',
+            'certainty.enum' => 'Choose a certainty from the list.',
         ];
     }
 

@@ -159,14 +159,19 @@
                     <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 1v4h24v4" fill="none" stroke="#b4b4b4" stroke-width="1.5"/></svg> Parent → child</li>
                     <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 3h24M2 7h24" stroke="#f0506e" stroke-width="1.5"/></svg> Consorts</li>
                     <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h24" stroke="#999999" stroke-width="1.5" stroke-dasharray="5 4"/></svg> Siblings</li>
-                    <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h24" stroke="#1e87f0" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/></svg> Equivalent in another religion</li>
                     <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h17" stroke="#faa05a" stroke-width="1.5" stroke-dasharray="6 3 2 3"/><path d="M19 1.5 26 5l-7 3.5z" fill="#faa05a"/></svg> Council / court (head → member)</li>
                     <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 8C8 1 20 1 26 8" fill="none" stroke="#c8962e" stroke-width="2"/></svg> ♛ Co-rulers</li>
-                    <li x-show="isComparison">
-                        <svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h17" stroke="#7c4dff" stroke-width="1.5" stroke-dasharray="5 3"/><path d="M19 1.5 26 5l-7 3.5z" fill="#7c4dff"/></svg>
-                        <canvas class="explorer-legend-icon" data-legend-icon="likeness" aria-hidden="true"></canvas>
-                        Is like (syncretic origin)
+                    <li class="uk-margin-small-top">
+                        <span class="uk-text-muted"><canvas class="explorer-legend-icon" data-legend-icon="likeness" aria-hidden="true"></canvas> Syncretism</span>
                     </li>
+                    <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h24" stroke="#1e87f0" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/></svg> Equivalent (identified as one god)</li>
+                    <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h24" stroke="#32a852" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/></svg> Cognates (common older god)</li>
+                    <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h24" stroke="#8c8c8c" stroke-width="2" stroke-dasharray="1 6" stroke-linecap="round"/></svg> Analogues (similar, no known link)</li>
+                    <li>
+                        <svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h17" stroke="#7c4dff" stroke-width="1.5" stroke-dasharray="5 3"/><path d="M19 1.5 26 5l-7 3.5z" fill="#7c4dff"/></svg>
+                        Source → result: fusion, absorption, avatar, form, later form, adoption, interpretation, supplanting, split, demonization, deification
+                    </li>
+                    <li class="uk-text-meta">Faint lines are hypotheses or disputed.</li>
                     <li class="uk-margin-small-top">
                         <span class="uk-text-muted">Elements</span>
                         <div class="explorer-legend-elements">
@@ -219,17 +224,6 @@
                                     <dd x-text="selected.element"></dd>
                                 </div>
                             </template>
-                            <template x-if="selected.syncreticOrigin">
-                                <div>
-                                    <dt>Syncretic origin / most like</dt>
-                                    <dd>
-                                        <a :href="selected.syncreticOrigin.url"
-                                           @click.prevent="navigate(selected.syncreticOrigin.url, selected.syncreticOrigin.graphUrl, selected.syncreticOrigin.name)"
-                                           x-text="selected.syncreticOrigin.name"></a>
-                                        <span class="uk-text-meta" x-text="'· ' + selected.syncreticOrigin.religion"></span>
-                                    </dd>
-                                </div>
-                            </template>
                             <template x-if="selected.region">
                                 <div>
                                     <dt>Region</dt>
@@ -258,9 +252,10 @@
                                     <span class="uk-text-meta" x-text="relative.label"></span>
                                     <a href="#" @click.prevent="selectNode(relative.node)" x-text="relative.node.name"></a>
                                     <span class="uk-text-meta" x-show="relative.node.religion.slug !== selected.religion.slug" x-text="'· ' + relative.node.religion.name"></span>
-                                    <div class="uk-text-small uk-text-muted" x-show="relative.tradition || relative.note">
+                                    <div class="uk-text-small uk-text-muted" x-show="relative.tradition || relative.certainty || relative.period || relative.note">
                                         <span class="uk-label uk-label-warning explorer-religion-label" x-show="relative.tradition" x-text="relative.tradition + ' tradition'"></span>
-                                        <span x-text="relative.note"></span>
+                                        <span class="uk-label explorer-religion-label" :class="{ 'uk-label-danger': relative.certainty?.value === 'disputed' }" x-show="relative.certainty" x-text="relative.certainty?.label"></span>
+                                        <span x-text="[relative.period, relative.note].filter(Boolean).join(' · ')"></span>
                                     </div>
                                 </li>
                             </template>

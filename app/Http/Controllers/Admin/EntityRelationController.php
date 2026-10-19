@@ -18,6 +18,8 @@ class EntityRelationController extends Controller
         EntityRelation::create([
             ...EntityRelation::attributesFor($entity, $request->role(), $related),
             'religion_id' => $request->validated('religion_id'),
+            'certainty' => $request->validated('certainty'),
+            'period' => $request->validated('period'),
             'note' => $request->validated('note'),
         ]);
 

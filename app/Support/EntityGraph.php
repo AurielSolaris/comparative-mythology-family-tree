@@ -12,8 +12,10 @@ use Illuminate\Support\Collection;
  * Builds the node/edge graphs the public canvas explorer draws.
  *
  * Parent edges point from parent to child and council edges from the head
- * of the council or court to the member. Consort, sibling and equivalent
- * edges are undirected; for them "from" is the entity drawn on the left.
+ * of the council or court to the member. Directional syncretism edges
+ * point from the source to the result (e.g. Vishnu → his avatar Krishna).
+ * Symmetric edges (consort, sibling, co-ruler, equivalent, cognate,
+ * analogue) are undirected; for them "from" is the entity drawn on the left.
  */
 class EntityGraph
 {
@@ -63,8 +65,9 @@ class EntityGraph
     }
 
     /**
-     * Every member of the religion (primary or additional), plus their
-     * equivalents in other religions.
+     * Every member of the religion (primary or additional), plus the
+     * entities in other religions they are syncretically linked to
+     * (equivalents, sources, fusions, avatars and so on).
      *
      * @return array<string, mixed>
      */
@@ -72,12 +75,14 @@ class EntityGraph
     {
         [$ids, $truncated] = $this->membersOf([$religion->id]);
 
-        $equivalents = EntityRelation::query()
-            ->where('kind', RelationKind::Equivalent)
+        $syncretic = array_filter(RelationKind::cases(), fn (RelationKind $kind) => $kind->isSyncretic());
+
+        $links = EntityRelation::query()
+            ->whereIn('kind', $syncretic)
             ->where(fn ($query) => $query->whereIn('entity_id', $ids)->orWhereIn('related_entity_id', $ids))
             ->get(['entity_id', 'related_entity_id']);
 
-        foreach ($equivalents as $relation) {
+        foreach ($links as $relation) {
             foreach ([$relation->entity_id, $relation->related_entity_id] as $id) {
                 if (count($ids) >= self::MAX_NODES) {
                     $truncated = true;
@@ -142,7 +147,7 @@ class EntityGraph
     protected function build(array $ids, bool $truncated): array
     {
         $entities = Entity::query()
-            ->with(['religion', 'additionalReligions', 'syncreticOrigin.religion'])
+            ->with(['religion', 'additionalReligions'])
             ->whereIn('id', $ids)
             ->ordered()
             ->get();
@@ -152,6 +157,8 @@ class EntityGraph
             ->whereIn('entity_id', $ids)
             ->whereIn('related_entity_id', $ids)
             ->get();
+
+        $byId = $entities->keyBy('id');
 
         return [
             'nodes' => $entities->map(fn (Entity $entity) => [
@@ -166,13 +173,6 @@ class EntityGraph
                     'symbol' => $entity->gender->symbol(),
                 ] : null,
                 'element' => $entity->element,
-                'syncreticOrigin' => $entity->syncreticOrigin ? [
-                    'id' => $entity->syncreticOrigin->id,
-                    'name' => $entity->syncreticOrigin->name,
-                    'religion' => $entity->syncreticOrigin->religion->name,
-                    'url' => route('entities.show', $entity->syncreticOrigin),
-                    'graphUrl' => route('graph.entities', $entity->syncreticOrigin),
-                ] : null,
                 'region' => $entity->region,
                 'origin' => $entity->origin,
                 'aliases' => $entity->aliases ?? [],
@@ -180,7 +180,7 @@ class EntityGraph
                 'url' => route('entities.show', $entity),
                 'graphUrl' => route('graph.entities', $entity),
             ])->all(),
-            'edges' => $edges->map(function (EntityRelation $relation) {
+            'edges' => $edges->map(function (EntityRelation $relation) use ($byId) {
                 [$from, $to] = $relation->displayOrder();
 
                 return [
@@ -188,12 +188,34 @@ class EntityGraph
                     'from' => $from,
                     'to' => $to,
                     'kind' => $relation->kind->value,
+                    'syncretic' => $relation->kind->isSyncretic(),
+                    'directed' => ! $relation->kind->isSymmetric(),
                     'tradition' => $relation->tradition?->name,
+                    'certainty' => $relation->certainty ? [
+                        'value' => $relation->certainty->value,
+                        'label' => $relation->certainty->label(),
+                    ] : null,
+                    'period' => $relation->period,
                     'note' => $relation->note,
                     'swappable' => $relation->hasSwappableSides(),
+                    'fromRole' => $this->roleView($relation, $byId[$from]),
+                    'toRole' => $this->roleView($relation, $byId[$to]),
                 ];
             })->all(),
             'truncated' => $truncated,
         ];
+    }
+
+    /**
+     * The relation read from one of its entities, e.g. "Avatar of" or
+     * "Daughter of", with where it goes in a list of relatives.
+     *
+     * @return array{label: string, order: int}
+     */
+    protected function roleView(EntityRelation $relation, Entity $entity): array
+    {
+        $role = $relation->roleFor($entity);
+
+        return ['label' => $role->label($entity->gender), 'order' => $role->sortOrder()];
     }
 }

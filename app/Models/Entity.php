@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-#[Fillable(['religion_id', 'name', 'gender', 'element', 'syncretic_origin_id', 'region', 'origin', 'aliases'])]
+#[Fillable(['religion_id', 'name', 'gender', 'element', 'region', 'origin', 'aliases'])]
 class Entity extends Model
 {
     /** @use HasFactory<EntityFactory> */
@@ -63,16 +63,6 @@ class Entity extends Model
     public function religion(): BelongsTo
     {
         return $this->belongsTo(Religion::class);
-    }
-
-    /**
-     * The entity this one was syncretised from, or is most like.
-     *
-     * @return BelongsTo<Entity, $this>
-     */
-    public function syncreticOrigin(): BelongsTo
-    {
-        return $this->belongsTo(Entity::class, 'syncretic_origin_id');
     }
 
     /**

@@ -72,12 +72,15 @@
                                             <div class="uk-text-meta">{{ $relative['role']->label($entity->gender) }}</div>
                                             <a class="uk-link-heading" href="{{ route('admin.entities.edit', $relative['entity']) }}">{{ $relative['entity']->name }}</a>
                                             <span class="uk-text-meta">· {{ $relative['entity']->religion->name }}</span>
-                                            @if ($relative['relation']->tradition || $relative['relation']->note)
+                                            @if ($relative['relation']->tradition || $relative['relation']->certainty || $relative['relation']->period || $relative['relation']->note)
                                                 <div class="uk-text-small uk-text-muted">
                                                     @if ($relative['relation']->tradition)
                                                         <span class="uk-label uk-label-warning">{{ $relative['relation']->tradition->name }} tradition</span>
                                                     @endif
-                                                    {{ $relative['relation']->note }}
+                                                    @if ($relative['relation']->certainty)
+                                                        <span @class(['uk-label', 'uk-label-danger' => $relative['relation']->certainty === App\Enums\RelationCertainty::Disputed])>{{ $relative['relation']->certainty->label() }}</span>
+                                                    @endif
+                                                    {{ collect([$relative['relation']->period, $relative['relation']->note])->filter()->join(' · ') }}
                                                 </div>
                                             @endif
                                             <a class="uk-text-small" href="{{ route('admin.relations.sources', $relative['relation']) }}">
@@ -108,13 +111,20 @@
                           x-data="entityPicker(@js(['suggestUrl' => route('search.suggestions'), 'excludeId' => $entity->id]))">
                         @csrf
 
-                        <x-admin.field :label="$entity->name.' is…'" for="role">
-                            <select @class(['uk-select', 'uk-form-danger' => $errors->has('role')]) id="role" name="role" required>
-                                @foreach ($roles as $role)
-                                    <option value="{{ $role->value }}" @selected(old('role') === $role->value)>{{ $role->label($entity->gender) }}</option>
-                                @endforeach
-                            </select>
-                        </x-admin.field>
+                        <div x-data="{ role: @js(old('role', App\Enums\RelationRole::ParentOf->value)), descriptions: @js(collect(App\Enums\RelationRole::cases())->mapWithKeys(fn ($role) => [$role->value => $role->kind()->description()])) }">
+                            <x-admin.field :label="$entity->name.' is…'" for="role">
+                                <select @class(['uk-select', 'uk-form-danger' => $errors->has('role')]) id="role" name="role" required x-model="role">
+                                    @foreach ($roleGroups as $group => $roles)
+                                        <optgroup label="{{ $group }}">
+                                            @foreach ($roles as $role)
+                                                <option value="{{ $role->value }}" @selected(old('role') === $role->value)>{{ $role->label($entity->gender) }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endforeach
+                                </select>
+                                <div class="uk-text-meta uk-margin-small-top" x-text="descriptions[role]"></div>
+                            </x-admin.field>
+                        </div>
 
                         <x-admin.field label="…this entity" for="related-entity-search" error="related_entity_id">
                             <div class="uk-inline uk-width-1-1" @click.outside="open = false">
@@ -153,6 +163,24 @@
                                 @endforeach
                             </select>
                         </x-admin.field>
+
+                        <div class="uk-grid-small uk-child-width-1-2@s" uk-grid>
+                            <div>
+                                <x-admin.field label="Certainty (optional)" for="relation-certainty" error="certainty" help="Who stands behind this relation.">
+                                    <select @class(['uk-select', 'uk-form-danger' => $errors->has('certainty')]) id="relation-certainty" name="certainty">
+                                        <option value="">Not specified</option>
+                                        @foreach ($certainties as $certainty)
+                                            <option value="{{ $certainty->value }}" @selected(old('certainty') === $certainty->value)>{{ $certainty->label() }}</option>
+                                        @endforeach
+                                    </select>
+                                </x-admin.field>
+                            </div>
+                            <div>
+                                <x-admin.field label="Period (optional)" for="relation-period" error="period" help="e.g. “Gupta period”, “2nd c. BCE”.">
+                                    <input @class(['uk-input', 'uk-form-danger' => $errors->has('period')]) id="relation-period" name="period" type="text" value="{{ old('period') }}" maxlength="255">
+                                </x-admin.field>
+                            </div>
+                        </div>
 
                         <x-admin.field label="Note (optional)" for="note" help="e.g. “in Hesiod's Theogony”, “adoptive”, “in some traditions”.">
                             <input @class(['uk-input', 'uk-form-danger' => $errors->has('note')]) id="note" name="note" type="text" value="{{ old('note') }}" maxlength="255">

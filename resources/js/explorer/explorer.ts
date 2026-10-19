@@ -2,7 +2,6 @@ import axios from 'axios';
 import { component } from '../alpine';
 import { paintLegendIcons } from './elements';
 import { religionColor, TreeCanvas } from './renderer';
-import { type Role, ROLE_ORDER, roleLabel } from './terms';
 import type { Graph, GraphEdge, GraphNode, ReligionRef } from './types';
 
 export interface ExplorerConfig {
@@ -41,10 +40,12 @@ export interface Suggestion {
 }
 
 interface Relative {
-    role: Role;
     label: string;
+    order: number;
     node: GraphNode;
     tradition: string | null;
+    certainty: GraphEdge['certainty'];
+    period: string | null;
     note: string | null;
 }
 
@@ -78,21 +79,20 @@ export function relativesOf(node: GraphNode, graph: Graph): Relative[] {
             continue;
         }
 
-        const role: Role = {
-            parent: isFrom ? 'parent' : 'child',
-            council: isFrom ? 'councilHead' : 'councilMember',
-            consort: 'consort',
-            sibling: 'sibling',
-            equivalent: 'equivalent',
-            co_ruler: 'coRuler',
-        }[edge.kind] as Role;
+        const role = isFrom ? edge.fromRole : edge.toRole;
 
-        relatives.push({ role, label: roleLabel(role, node), node: other, tradition: edge.tradition, note: edge.note });
+        relatives.push({
+            label: role.label,
+            order: role.order,
+            node: other,
+            tradition: edge.tradition,
+            certainty: edge.certainty,
+            period: edge.period,
+            note: edge.note,
+        });
     }
 
-    return relatives.sort(
-        (a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role) || a.node.name.localeCompare(b.node.name),
-    );
+    return relatives.sort((a, b) => a.order - b.order || a.node.name.localeCompare(b.node.name));
 }
 
 export function explorer(config: ExplorerConfig) {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\Gender;
+use App\Enums\RelationCertainty;
 use App\Enums\RelationRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\EntityRequest;
@@ -71,13 +72,14 @@ class EntityController extends Controller
 
     public function edit(Entity $entity): View
     {
-        $entity->loadRelatives()->load(['additionalReligions', 'syncreticOrigin.religion', 'sources']);
+        $entity->loadRelatives()->load(['additionalReligions', 'sources']);
         $entity->outgoingRelations->loadCount('sources');
         $entity->incomingRelations->loadCount('sources');
 
         return view('admin.entities.edit', [
             'entity' => $entity,
-            'roles' => RelationRole::cases(),
+            'roleGroups' => RelationRole::grouped(),
+            'certainties' => RelationCertainty::cases(),
             ...$this->formOptions(),
         ]);
     }

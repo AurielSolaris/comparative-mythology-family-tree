@@ -7,7 +7,7 @@
 
     $features = [
         ['sprite' => 'ziggurat', 'title' => 'Interactive canvas', 'text' => 'Pan, zoom and search across pantheons. Double-click a god to put them at the centre of the universe. They tend to approve.'],
-        ['sprite' => 'trident', 'title' => 'Cross-pantheon relations', 'text' => 'Equivalents, councils, consorts and family lines. Some gods belong to two pantheons, so the tree does too.'],
+        ['sprite' => 'trident', 'title' => 'Cross-pantheon relations', 'text' => 'Family lines, consorts and councils, plus every kind of syncretism: equivalents, cognates, fusions, avatars, adoptions and more, each marked attested, agreed or disputed. Some gods belong to two pantheons, so the tree does too.'],
         ['sprite' => 'tablet', 'title' => 'Open data', 'text' => 'Export everything as JSON or SQLite. Versioned, slug-based, and yours to take elsewhere.'],
     ];
 
@@ -22,7 +22,7 @@
         [
             'label' => 'Compare',
             'title' => 'Pantheons, side by side.',
-            'text' => 'Pick two to four religions and each one gets a column. Generations line up across them, and equivalents are joined with a dotted arc. The link is shareable.',
+            'text' => 'Pick two to four religions and each one gets a column. Generations line up across them, and syncretic links (equivalents, adoptions, fusions…) arc between the columns. The link is shareable.',
             'screenshot' => 'images/screenshots/compare.png',
             'alt' => 'Two religions compared in side-by-side columns',
         ],

@@ -122,45 +122,6 @@ class EntityManagementTest extends TestCase
         $this->get(route('admin.entities.index', ['gender' => 'female']))->assertSee('Freyja')->assertDontSee('Freyr');
     }
 
-    public function test_a_syncretic_origin_can_be_set_shown_and_cleared(): void
-    {
-        $zeus = Entity::factory()->create(['name' => 'Zeus']);
-        $jupiter = Entity::factory()->create(['name' => 'Jupiter']);
-        $attributes = ['religion_id' => $jupiter->religion_id, 'name' => 'Jupiter'];
-
-        $this->put(route('admin.entities.update', $jupiter), [...$attributes, 'syncretic_origin_id' => $zeus->id])
-            ->assertSessionHasNoErrors();
-        $this->assertTrue($jupiter->fresh()->syncreticOrigin->is($zeus));
-
-        $this->get(route('admin.entities.edit', $jupiter))->assertSee("Zeus ({$zeus->religion->name})");
-
-        $this->put(route('admin.entities.update', $jupiter), [...$attributes, 'syncretic_origin_id' => ''])
-            ->assertSessionHasNoErrors();
-        $this->assertNull($jupiter->fresh()->syncretic_origin_id);
-    }
-
-    public function test_an_entity_cannot_be_its_own_syncretic_origin(): void
-    {
-        $jupiter = Entity::factory()->create(['name' => 'Jupiter']);
-
-        $this->put(route('admin.entities.update', $jupiter), ['religion_id' => $jupiter->religion_id, 'name' => 'Jupiter', 'syncretic_origin_id' => $jupiter->id])
-            ->assertSessionHasErrors(['syncretic_origin_id' => 'An entity cannot be its own syncretic origin.']);
-
-        $this->put(route('admin.entities.update', $jupiter), ['religion_id' => $jupiter->religion_id, 'name' => 'Jupiter', 'syncretic_origin_id' => 999])
-            ->assertSessionHasErrors('syncretic_origin_id');
-    }
-
-    public function test_deleting_the_origin_entity_clears_the_link(): void
-    {
-        $zeus = Entity::factory()->create();
-        $jupiter = Entity::factory()->create(['syncretic_origin_id' => $zeus->id]);
-
-        $this->delete(route('admin.entities.destroy', $zeus));
-
-        $this->assertModelExists($jupiter);
-        $this->assertNull($jupiter->fresh()->syncretic_origin_id);
-    }
-
     public function test_the_index_can_be_filtered_by_element_and_offers_the_elements_in_use(): void
     {
         Entity::factory()->create(['name' => 'Agni', 'element' => 'Fire']);

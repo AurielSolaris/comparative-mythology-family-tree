@@ -1,35 +1,11 @@
 import type { GraphNode } from './types';
 
-/** A relation seen from one entity, as in "Zeus is <role> Apollo". */
-export type Role = 'child' | 'sibling' | 'consort' | 'coRuler' | 'parent' | 'councilMember' | 'councilHead' | 'equivalent';
-
-/** Display order in the details panel. */
-export const ROLE_ORDER: Role[] = ['child', 'sibling', 'consort', 'coRuler', 'parent', 'councilMember', 'councilHead', 'equivalent'];
-
 type Gendered = [male: string, female: string, neutral: string];
-
-const ROLE_LABELS: Record<Role, Gendered | string> = {
-    child: ['Son of', 'Daughter of', 'Child of'],
-    sibling: ['Brother of', 'Sister of', 'Sibling of'],
-    consort: ['Husband of', 'Wife of', 'Consort of'],
-    coRuler: 'Co-ruler with',
-    parent: ['Father of', 'Mother of', 'Parent of'],
-    councilMember: 'Member of the council/court of',
-    councilHead: 'Council/court includes',
-    equivalent: 'Equivalent of',
-};
 
 function gendered(words: Gendered, node: GraphNode | undefined): string {
     const gender = node?.gender?.value;
 
     return gender === 'male' ? words[0] : gender === 'female' ? words[1] : words[2];
-}
-
-/** "Son of", "Wife of", "Brother of"… worded for the entity's own gender. */
-export function roleLabel(role: Role, node: GraphNode): string {
-    const label = ROLE_LABELS[role];
-
-    return typeof label === 'string' ? label : gendered(label, node);
 }
 
 /** The word for a child on a parent → child line: son, daughter or child. */
