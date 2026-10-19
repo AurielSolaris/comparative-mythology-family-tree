@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'color'])]
+#[Fillable(['name', 'color', 'region', 'time_period'])]
 class Religion extends Model
 {
     /** @use HasFactory<ReligionFactory> */

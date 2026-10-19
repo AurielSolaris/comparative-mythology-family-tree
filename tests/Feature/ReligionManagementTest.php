@@ -60,6 +60,26 @@ class ReligionManagementTest extends TestCase
             ->assertSessionHasErrors('color');
     }
 
+    public function test_a_religion_can_record_its_region_and_time_period(): void
+    {
+        $religion = Religion::factory()->create(['name' => 'Eblaite']);
+
+        $this->put(route('admin.religions.update', $religion), [
+            'name' => 'Eblaite', 'region' => 'Northern Syria', 'time_period' => 'c. 2400–2300 BCE',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(['Northern Syria', 'c. 2400–2300 BCE'], [$religion->fresh()->region, $religion->fresh()->time_period]);
+        $this->get(route('admin.religions.index'))->assertSeeText('Northern Syria')->assertSeeText('c. 2400–2300 BCE');
+
+        $this->put(route('admin.religions.update', $religion), ['name' => 'Eblaite', 'region' => '', 'time_period' => ''])
+            ->assertSessionHasNoErrors();
+        $this->assertNull($religion->fresh()->region);
+        $this->assertNull($religion->fresh()->time_period);
+
+        $this->put(route('admin.religions.update', $religion), ['name' => 'Eblaite', 'region' => str_repeat('a', 256), 'time_period' => str_repeat('a', 256)])
+            ->assertSessionHasErrors(['region', 'time_period']);
+    }
+
     public function test_the_chosen_colour_is_sent_to_the_explorer(): void
     {
         $religion = Religion::factory()->create(['color' => '#aa3300']);

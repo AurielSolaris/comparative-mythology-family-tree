@@ -283,7 +283,7 @@
                 @if ($religions->isNotEmpty())
                     <ul class="uk-subnav uk-subnav-pill uk-flex-center">
                         @foreach ($religions as $religion)
-                            <li><a href="{{ route('religions.show', $religion) }}" @click.prevent="religion = @js($religion->slug); openReligion()">{{ $religion->name }}</a></li>
+                            <li><a href="{{ route('religions.show', $religion) }}" @click.prevent="religion = @js($religion->slug); openReligion()" @if ($religion->region || $religion->time_period) title="{{ collect([$religion->region, $religion->time_period])->filter()->join(' · ') }}" @endif>{{ $religion->name }}</a></li>
                         @endforeach
                     </ul>
                 @endif

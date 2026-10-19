@@ -30,7 +30,7 @@ class DatasetExportTest extends TestCase
     {
         parent::setUp();
 
-        $this->canaanite = Religion::factory()->create(['name' => 'Canaanite', 'color' => '#aa8800']);
+        $this->canaanite = Religion::factory()->create(['name' => 'Canaanite', 'color' => '#aa8800', 'region' => 'Levant', 'time_period' => 'Iron Age']);
         $eblaite = Religion::factory()->create(['name' => 'Eblaite']);
 
         $this->el = Entity::factory()->for($this->canaanite)->create(['name' => 'El', 'gender' => 'male', 'element' => 'Sky', 'aliases' => ['Ilu', 'ʾĒl']]);
@@ -60,9 +60,11 @@ class DatasetExportTest extends TestCase
         $content = $response->streamedContent();
         $data = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
 
-        $this->assertSame(5, $data['format_version']);
+        $this->assertSame(6, $data['format_version']);
         $this->assertSame(['Canaanite', 'Eblaite'], array_column($data['religions'], 'name'));
         $this->assertSame('#aa8800', $data['religions'][0]['color']);
+        $this->assertSame(['Levant', 'Iron Age'], [$data['religions'][0]['region'], $data['religions'][0]['time_period']]);
+        $this->assertSame([null, null], [$data['religions'][1]['region'], $data['religions'][1]['time_period']]);
 
         $baal = collect($data['entities'])->firstWhere('name', 'Baal');
         $this->assertSame('canaanite', $baal['religion']);
@@ -106,6 +108,7 @@ class DatasetExportTest extends TestCase
 
             $this->assertSame('comparative-mythology-family-tree', $database->query("SELECT value FROM meta WHERE key = 'format'")->fetchColumn());
             $this->assertSame(['Canaanite', 'Eblaite'], $database->query('SELECT name FROM religions ORDER BY name')->fetchAll(PDO::FETCH_COLUMN));
+            $this->assertSame(['Levant', 'Iron Age'], $database->query("SELECT region, time_period FROM religions WHERE name = 'Canaanite'")->fetch(PDO::FETCH_NUM));
             $this->assertSame(['Baal', 'El'], $database->query('SELECT name FROM entities ORDER BY name')->fetchAll(PDO::FETCH_COLUMN));
             $this->assertSame('Eblaite', $database->query(
                 'SELECT r.name FROM entity_religions er JOIN entities e ON e.id = er.entity_id JOIN religions r ON r.id = er.religion_id WHERE e.name = "Baal"',

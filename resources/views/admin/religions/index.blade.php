@@ -35,6 +35,9 @@
                                     @unless ($religion->color)
                                         <span class="uk-text-meta">· automatic colour</span>
                                     @endunless
+                                    @if ($religion->region || $religion->time_period)
+                                        <div class="uk-text-meta">{{ collect([$religion->region, $religion->time_period])->filter()->join(' · ') }}</div>
+                                    @endif
                                 </td>
                                 <td>
                                     <a href="{{ route('admin.entities.index', ['religion' => $religion->id]) }}">{{ $religion->memberCount() }}</a>

@@ -28,6 +28,8 @@ class ReligionRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255', Rule::unique('religions')->ignore($this->route('religion'))],
             'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'region' => ['nullable', 'string', 'max:255'],
+            'time_period' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

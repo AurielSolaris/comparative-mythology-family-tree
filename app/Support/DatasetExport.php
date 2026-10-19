@@ -40,8 +40,9 @@ class DatasetExport
      *    (cognate, analogue, fusion, absorption, avatar, aspect, derivation,
      *    adoption, interpretation, supplanting, fission, demonization,
      *    deification), and added each relation's certainty and period.
+     * 6: added the religions' region and time period.
      */
-    public const FORMAT_VERSION = 5;
+    public const FORMAT_VERSION = 6;
 
     /**
      * @return array{format: string, format_version: int, exported_at: string, religions: list<array<string, mixed>>, entities: list<array<string, mixed>>, relations: list<array<string, mixed>>}
@@ -63,6 +64,8 @@ class DatasetExport
                 'slug' => $religion->slug,
                 'name' => $religion->name,
                 'color' => $religion->color,
+                'region' => $religion->region,
+                'time_period' => $religion->time_period,
             ])->all(),
             'entities' => $entities->map(fn (Entity $entity) => [
                 'slug' => $entity->slug,
@@ -216,7 +219,9 @@ class DatasetExport
                 id INTEGER PRIMARY KEY,
                 slug TEXT NOT NULL UNIQUE,
                 name TEXT NOT NULL UNIQUE,
-                color TEXT
+                color TEXT,
+                region TEXT,
+                time_period TEXT
             );
 
             CREATE TABLE entities (
@@ -285,9 +290,9 @@ class DatasetExport
 
         /** @var array<string, int> $religionIds */
         $religionIds = [];
-        $insertReligion = $database->prepare('INSERT INTO religions (slug, name, color) VALUES (?, ?, ?)');
+        $insertReligion = $database->prepare('INSERT INTO religions (slug, name, color, region, time_period) VALUES (?, ?, ?, ?, ?)');
         foreach ($data['religions'] as $religion) {
-            $insertReligion->execute([$religion['slug'], $religion['name'], $religion['color']]);
+            $insertReligion->execute([$religion['slug'], $religion['name'], $religion['color'], $religion['region'], $religion['time_period']]);
             $religionIds[$religion['slug']] = (int) $database->lastInsertId();
         }
 
