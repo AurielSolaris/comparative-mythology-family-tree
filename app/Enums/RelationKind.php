@@ -14,7 +14,7 @@ namespace App\Enums;
  * identity flowed, from the source (entity_id) to the result
  * (related_entity_id): the component to the fused God, the absorbed God to
  * the one that absorbed it, the God to its avatar, the older form to the
- * later one, and so on.
+ * later one, the name's source to the one named after it, and so on.
  */
 enum RelationKind: string
 {
@@ -38,12 +38,14 @@ enum RelationKind: string
     case Fission = 'fission';
     case Demonization = 'demonization';
     case Deification = 'deification';
+    case NameDerivation = 'name_derivation';
+    case Polemic = 'polemic';
 
     public function isSymmetric(): bool
     {
         return in_array($this, [
             self::Consort, self::Sibling, self::CoRuler,
-            self::Equivalent, self::Cognate, self::Analogue,
+            self::Equivalent, self::Cognate, self::Analogue, self::Polemic,
         ], true);
     }
 
@@ -68,7 +70,7 @@ enum RelationKind: string
             self::Sibling => 'Siblings.',
             self::Council => 'One heads a council or court the other belongs to.',
             self::CoRuler => 'They rule together.',
-            self::Equivalent => 'Identified as the same God, e.g. Vishnu and Nārāyaṇa.',
+            self::Equivalent => 'Identified as the same God or being, e.g. Vishnu and Nārāyaṇa.',
             self::Cognate => 'Descended from a common older God, without borrowing, e.g. Dyaus and Zeus.',
             self::Analogue => 'Comparable role or myth with no known historical link.',
             self::Fusion => 'Two or more Gods merged into a new compound God, e.g. Amun + Ra → Amun-Ra.',
@@ -82,6 +84,8 @@ enum RelationKind: string
             self::Fission => 'One God split into separate Gods.',
             self::Demonization => 'Turned into a demon or lesser being by a later or rival tradition.',
             self::Deification => 'A human or hero raised to a God.',
+            self::NameDerivation => 'One takes its name from the other, without being the same being, e.g. Aēšma-daēva → Asmodeus.',
+            self::Polemic => 'Linked by a hostile tradition to mock or condemn, e.g. a God’s name twisted into an insult.',
         };
     }
 }

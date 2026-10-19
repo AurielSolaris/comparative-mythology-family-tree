@@ -41,11 +41,25 @@ class DatasetExport
      *    adoption, interpretation, supplanting, fission, demonization,
      *    deification), and added each relation's certainty and period.
      * 6: added the religions' region and time period.
+     * 7: added what each entity is in each of its religions (classification
+     *    and the tradition's own term), the name_derivation and polemic
+     *    relation kinds, and the dataset's licence (CC BY 4.0).
      */
-    public const FORMAT_VERSION = 6;
+    public const FORMAT_VERSION = 7;
 
     /**
-     * @return array{format: string, format_version: int, exported_at: string, religions: list<array<string, mixed>>, entities: list<array<string, mixed>>, relations: list<array<string, mixed>>}
+     * The data is CC BY 4.0 (the code is GPLv3): reusers only need to credit it.
+     *
+     * @var array{name: string, url: string, attribution: string}
+     */
+    public const LICENSE = [
+        'name' => 'CC BY 4.0',
+        'url' => 'https://creativecommons.org/licenses/by/4.0/',
+        'attribution' => 'Comparative Mythology Family Tree by Debaditya Malakar, https://github.com/AurielSolaris/comparative-mythology-family-tree',
+    ];
+
+    /**
+     * @return array{format: string, format_version: int, exported_at: string, license: array{name: string, url: string, attribution: string}, religions: list<array<string, mixed>>, entities: list<array<string, mixed>>, relations: list<array<string, mixed>>}
      */
     public function toArray(): array
     {
@@ -60,6 +74,7 @@ class DatasetExport
             'format' => 'comparative-mythology-family-tree',
             'format_version' => self::FORMAT_VERSION,
             'exported_at' => now()->toIso8601String(),
+            'license' => self::LICENSE,
             'religions' => $religions->map(fn (Religion $religion) => [
                 'slug' => $religion->slug,
                 'name' => $religion->name,
@@ -74,6 +89,13 @@ class DatasetExport
                 'element' => $entity->element,
                 'religion' => $slugs[$entity->religion_id],
                 'also_religions' => $entity->additionalReligions->map(fn (Religion $religion) => $slugs[$religion->id])->values()->all(),
+                'classification' => $entity->classification?->value,
+                'classification_term' => $entity->classification_term,
+                'memberships' => $entity->additionalReligions->map(fn (Religion $religion) => [
+                    'religion' => $slugs[$religion->id],
+                    'classification' => $religion->pivot->classification?->value,
+                    'classification_term' => $religion->pivot->classification_term,
+                ])->values()->all(),
                 'region' => $entity->region,
                 'origin' => $entity->origin,
                 'aliases' => $entity->aliases ?? [],
@@ -231,25 +253,32 @@ class DatasetExport
                 gender TEXT,
                 element TEXT,
                 religion_id INTEGER NOT NULL REFERENCES religions (id),
+                -- What the entity is in its primary religion: god,
+                -- rejected_god, demon or spirit, and that tradition's own word.
+                classification TEXT,
+                classification_term TEXT,
                 region TEXT,
                 origin TEXT,
                 aliases TEXT NOT NULL, -- JSON array of strings
                 position INTEGER NOT NULL
             );
 
-            -- Religions an entity belongs to besides its primary one.
+            -- Religions an entity belongs to besides its primary one, and
+            -- what it is in each (e.g. Indra: a demon, daēva, in the Avesta).
             CREATE TABLE entity_religions (
                 entity_id INTEGER NOT NULL REFERENCES entities (id),
                 religion_id INTEGER NOT NULL REFERENCES religions (id),
+                classification TEXT,
+                classification_term TEXT,
                 PRIMARY KEY (entity_id, religion_id)
             );
 
             -- parent and council: entity_id is the parent / head of the council.
-            -- consort, sibling, co_ruler, equivalent, cognate and analogue are symmetric.
+            -- consort, sibling, co_ruler, equivalent, cognate, analogue and polemic are symmetric.
             -- The other syncretism kinds (fusion, absorption, avatar, aspect,
             -- derivation, adoption, interpretation, supplanting, fission,
-            -- demonization, deification) point from the source (entity_id)
-            -- to the result, e.g. a God to its avatar.
+            -- demonization, deification, name_derivation) point from the
+            -- source (entity_id) to the result, e.g. a God to its avatar.
             CREATE TABLE relations (
                 id INTEGER PRIMARY KEY,
                 kind TEXT NOT NULL,
@@ -284,7 +313,11 @@ class DatasetExport
         $database->beginTransaction();
 
         $insertMeta = $database->prepare('INSERT INTO meta (key, value) VALUES (?, ?)');
-        foreach (['format' => $data['format'], 'format_version' => $data['format_version'], 'exported_at' => $data['exported_at']] as $key => $value) {
+        $meta = [
+            'format' => $data['format'], 'format_version' => $data['format_version'], 'exported_at' => $data['exported_at'],
+            'license' => $data['license']['name'], 'license_url' => $data['license']['url'], 'attribution' => $data['license']['attribution'],
+        ];
+        foreach ($meta as $key => $value) {
             $insertMeta->execute([$key, (string) $value]);
         }
 
@@ -299,21 +332,23 @@ class DatasetExport
         /** @var array<string, int> $entityIds */
         $entityIds = [];
         $insertEntity = $database->prepare(
-            'INSERT INTO entities (slug, name, gender, element, religion_id, region, origin, aliases, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO entities (slug, name, gender, element, religion_id, classification, classification_term, region, origin, aliases, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         );
-        $insertMembership = $database->prepare('INSERT INTO entity_religions (entity_id, religion_id) VALUES (?, ?)');
+        $insertMembership = $database->prepare('INSERT INTO entity_religions (entity_id, religion_id, classification, classification_term) VALUES (?, ?, ?, ?)');
         $insertSource = $database->prepare(
             'INSERT INTO sources (entity_id, relation_id, kind, url, file, original_name, ref) VALUES (?, ?, ?, ?, ?, ?, ?)',
         );
         foreach ($data['entities'] as $entity) {
             $insertEntity->execute([
                 $entity['slug'], $entity['name'], $entity['gender'], $entity['element'], $religionIds[$entity['religion']],
-                $entity['region'], $entity['origin'], json_encode($entity['aliases'], JSON_UNESCAPED_UNICODE), $entity['position'],
+                $entity['classification'], $entity['classification_term'], $entity['region'], $entity['origin'], json_encode($entity['aliases'], JSON_UNESCAPED_UNICODE), $entity['position'],
             ]);
             $entityIds[$entity['slug']] = (int) $database->lastInsertId();
 
-            foreach ($entity['also_religions'] as $slug) {
-                $insertMembership->execute([$entityIds[$entity['slug']], $religionIds[$slug]]);
+            foreach ($entity['memberships'] as $membership) {
+                $insertMembership->execute([
+                    $entityIds[$entity['slug']], $religionIds[$membership['religion']], $membership['classification'], $membership['classification_term'],
+                ]);
             }
 
             foreach ($entity['sources'] as $source) {

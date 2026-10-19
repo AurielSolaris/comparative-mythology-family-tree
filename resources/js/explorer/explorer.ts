@@ -157,6 +157,15 @@ export function explorer(config: ExplorerConfig) {
                 : null;
         },
 
+        /** "Zoroastrian · Demon (daēva)": the religion and what the entity is there. */
+        membershipLabel(religion: ReligionRef): string {
+            const what = religion.classification
+                ? religion.classification.label + (religion.classificationTerm ? ` (${religion.classificationTerm})` : '')
+                : religion.classificationTerm;
+
+            return what ? `${religion.name} · ${what}` : religion.name;
+        },
+
         religionColor(religion: ReligionRef): string {
             return religionColor(religion);
         },

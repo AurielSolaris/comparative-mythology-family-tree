@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Classification;
 use App\Enums\Gender;
 use App\Enums\RelationRole;
 use App\Models\Concerns\HasSources;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-#[Fillable(['religion_id', 'name', 'gender', 'element', 'region', 'origin', 'aliases'])]
+#[Fillable(['religion_id', 'classification', 'classification_term', 'name', 'gender', 'element', 'region', 'origin', 'aliases'])]
 class Entity extends Model
 {
     /** @use HasFactory<EntityFactory> */
@@ -54,6 +55,7 @@ class Entity extends Model
         return [
             'aliases' => 'json:unicode',
             'gender' => Gender::class,
+            'classification' => Classification::class,
         ];
     }
 
@@ -66,13 +68,17 @@ class Entity extends Model
     }
 
     /**
-     * Religions the entity also belongs to besides its primary one.
+     * Religions the entity also belongs to besides its primary one, with
+     * what it is in each (the pivot's classification and term).
      *
      * @return BelongsToMany<Religion, $this>
      */
     public function additionalReligions(): BelongsToMany
     {
-        return $this->belongsToMany(Religion::class, 'entity_religion')->orderBy('name');
+        return $this->belongsToMany(Religion::class, 'entity_religion')
+            ->using(Membership::class)
+            ->withPivot(['classification', 'classification_term'])
+            ->orderBy('name');
     }
 
     /**

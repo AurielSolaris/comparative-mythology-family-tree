@@ -60,7 +60,10 @@ class DatasetExportTest extends TestCase
         $content = $response->streamedContent();
         $data = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
 
-        $this->assertSame(6, $data['format_version']);
+        $this->assertSame(7, $data['format_version']);
+        $this->assertSame('CC BY 4.0', $data['license']['name']);
+        $this->assertSame('https://creativecommons.org/licenses/by/4.0/', $data['license']['url']);
+        $this->assertStringContainsString('Debaditya Malakar', $data['license']['attribution']);
         $this->assertSame(['Canaanite', 'Eblaite'], array_column($data['religions'], 'name'));
         $this->assertSame('#aa8800', $data['religions'][0]['color']);
         $this->assertSame(['Levant', 'Iron Age'], [$data['religions'][0]['region'], $data['religions'][0]['time_period']]);
@@ -107,6 +110,7 @@ class DatasetExportTest extends TestCase
             $database = new PDO('sqlite:'.$copy);
 
             $this->assertSame('comparative-mythology-family-tree', $database->query("SELECT value FROM meta WHERE key = 'format'")->fetchColumn());
+            $this->assertSame('CC BY 4.0', $database->query("SELECT value FROM meta WHERE key = 'license'")->fetchColumn());
             $this->assertSame(['Canaanite', 'Eblaite'], $database->query('SELECT name FROM religions ORDER BY name')->fetchAll(PDO::FETCH_COLUMN));
             $this->assertSame(['Levant', 'Iron Age'], $database->query("SELECT region, time_period FROM religions WHERE name = 'Canaanite'")->fetch(PDO::FETCH_NUM));
             $this->assertSame(['Baal', 'El'], $database->query('SELECT name FROM entities ORDER BY name')->fetchAll(PDO::FETCH_COLUMN));

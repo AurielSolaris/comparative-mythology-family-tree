@@ -195,7 +195,8 @@
                     <p>Made by Debaditya Malakar (AurielSolaris)</p>
                     <ul class="landing-footer-links">
                         <li><a href="{{ $repositoryUrl }}"><span uk-icon="github"></span> GitHub</a></li>
-                        <li><a href="{{ $repositoryUrl }}/blob/main/LICENSE">GPLv3 licence</a></li>
+                        <li><a href="{{ $repositoryUrl }}/blob/main/LICENSE">Code: GPLv3</a></li>
+                        <li><a href="{{ $repositoryUrl }}/blob/main/LICENSE-DATA">Data: CC BY 4.0</a></li>
                     </ul>
                 </div>
             </div>

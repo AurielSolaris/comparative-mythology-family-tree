@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\Classification;
 use App\Enums\RelationKind;
 use App\Models\Entity;
 use App\Models\EntityRelation;
@@ -165,8 +166,10 @@ class EntityGraph
                 'id' => $entity->id,
                 'name' => $entity->name,
                 'slug' => $entity->slug,
-                'religion' => $entity->religion->reference(),
-                'otherReligions' => $entity->additionalReligions->map(fn (Religion $religion) => $religion->reference())->all(),
+                'religion' => $this->membershipView($entity->religion, $entity->classification, $entity->classification_term),
+                'otherReligions' => $entity->additionalReligions
+                    ->map(fn (Religion $religion) => $this->membershipView($religion, $religion->pivot->classification, $religion->pivot->classification_term))
+                    ->all(),
                 'gender' => $entity->gender ? [
                     'value' => $entity->gender->value,
                     'label' => $entity->gender->label(),
@@ -203,6 +206,20 @@ class EntityGraph
                 ];
             })->all(),
             'truncated' => $truncated,
+        ];
+    }
+
+    /**
+     * A religion an entity belongs to, with what the entity is there.
+     *
+     * @return array{name: string, slug: string, color: string|null, classification: array{value: string, label: string}|null, classificationTerm: string|null}
+     */
+    protected function membershipView(Religion $religion, ?Classification $classification, ?string $term): array
+    {
+        return [
+            ...$religion->reference(),
+            'classification' => $classification ? ['value' => $classification->value, 'label' => $classification->label()] : null,
+            'classificationTerm' => $term,
         ];
     }
 

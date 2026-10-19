@@ -17,13 +17,24 @@ export type RelationKind =
     | 'supplanting'
     | 'fission'
     | 'demonization'
-    | 'deification';
+    | 'deification'
+    | 'name_derivation'
+    | 'polemic';
+
+/** What an entity is in one tradition: a God there, a demon elsewhere. */
+export interface ClassificationView {
+    value: 'god' | 'rejected_god' | 'demon' | 'spirit';
+    label: string;
+}
 
 export interface ReligionRef {
     name: string;
     slug: string;
     /** Colour chosen by admins (#rrggbb), or null to derive one from the slug. */
     color: string | null;
+    /** On a node's religions: what the entity is in that tradition, and the tradition's own word for it. */
+    classification?: ClassificationView | null;
+    classificationTerm?: string | null;
 }
 
 export interface GraphNode {

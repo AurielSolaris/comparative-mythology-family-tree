@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\Classification;
 use App\Enums\Gender;
 use App\Enums\RelationCertainty;
 use App\Enums\RelationRole;
@@ -60,8 +61,8 @@ class EntityController extends Controller
     public function store(EntityRequest $request): RedirectResponse
     {
         $entity = DB::transaction(function () use ($request) {
-            $entity = Entity::create($request->safe()->except('additional_religion_ids'));
-            $entity->additionalReligions()->sync($request->validated('additional_religion_ids'));
+            $entity = Entity::create($request->safe()->except(['additional_religion_ids', 'memberships']));
+            $entity->additionalReligions()->sync($request->memberships());
 
             return $entity;
         });
@@ -87,8 +88,8 @@ class EntityController extends Controller
     public function update(EntityRequest $request, Entity $entity): RedirectResponse
     {
         DB::transaction(function () use ($request, $entity) {
-            $entity->update($request->safe()->except('additional_religion_ids'));
-            $entity->additionalReligions()->sync($request->validated('additional_religion_ids'));
+            $entity->update($request->safe()->except(['additional_religion_ids', 'memberships']));
+            $entity->additionalReligions()->sync($request->memberships());
         });
 
         return redirect()->route('admin.entities.edit', $entity)->with('status', "Saved {$entity->name}.");
@@ -114,13 +115,14 @@ class EntityController extends Controller
     /**
      * The religion choices, plus elements and regions already in use as suggestions.
      *
-     * @return array{religions: \Illuminate\Database\Eloquent\Collection<int, Religion>, genders: list<Gender>, elements: Collection<int, string>, regions: Collection<int, string>}
+     * @return array{religions: \Illuminate\Database\Eloquent\Collection<int, Religion>, genders: list<Gender>, classifications: list<Classification>, elements: Collection<int, string>, regions: Collection<int, string>}
      */
     protected function formOptions(): array
     {
         return [
             'religions' => Religion::query()->orderBy('name')->get(),
             'genders' => Gender::cases(),
+            'classifications' => Classification::cases(),
             'elements' => Entity::knownElements(),
             'regions' => Entity::query()->whereNotNull('region')->distinct()->orderBy('region')->pluck('region'),
         ];

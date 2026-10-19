@@ -132,6 +132,7 @@
                         <li><a href="{{ route('export', 'json') }}" download>JSON</a></li>
                         <li><a class="uk-text-lowercase" href="{{ route('export', 'sqlite') }}" download uk-tooltip="SQLite database">.sqlite</a></li>
                         <li><a class="uk-text-lowercase" href="{{ route('export', 'db') }}" download uk-tooltip="SQLite database">.db</a></li>
+                        <li><a href="https://github.com/AurielSolaris/comparative-mythology-family-tree/blob/main/LICENSE-DATA" uk-tooltip="Free to reuse with credit">CC BY 4.0</a></li>
                     </ul>
                 </div>
                 </div>
@@ -167,9 +168,10 @@
                     <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h24" stroke="#1e87f0" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/></svg> Equivalent (identified as one God)</li>
                     <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h24" stroke="#32a852" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/></svg> Cognates (common older God)</li>
                     <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h24" stroke="#8c8c8c" stroke-width="2" stroke-dasharray="1 6" stroke-linecap="round"/></svg> Analogues (similar, no known link)</li>
+                    <li><svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h24" stroke="#b03a2e" stroke-width="2" stroke-dasharray="2 5" stroke-linecap="round"/></svg> Polemic (linked by a hostile tradition)</li>
                     <li>
                         <svg class="explorer-legend" viewBox="0 0 28 10" aria-hidden="true"><path d="M2 5h17" stroke="#7c4dff" stroke-width="1.5" stroke-dasharray="5 3"/><path d="M19 1.5 26 5l-7 3.5z" fill="#7c4dff"/></svg>
-                        Source → result: fusion, absorption, avatar, form, later form, adoption, interpretation, supplanting, split, demonization, deification
+                        Source → result: fusion, absorption, avatar, form, later form, adoption, interpretation, supplanting, split, demonization, deification, name
                     </li>
                     <li class="uk-text-meta">Faint lines are hypotheses or disputed.</li>
                     <li class="uk-margin-small-top">
@@ -199,9 +201,9 @@
                         <div class="uk-grid-small" uk-grid>
                             <div class="uk-width-expand">
                                 <h2 class="uk-card-title uk-margin-remove" x-text="selected.name"></h2>
-                                <span class="uk-label explorer-religion-label" :style="{ backgroundColor: religionColor(selected.religion) }" x-text="selected.religion.name"></span>
+                                <span class="uk-label explorer-religion-label" :style="{ backgroundColor: religionColor(selected.religion) }" x-text="membershipLabel(selected.religion)"></span>
                                 <template x-for="religion in selected.otherReligions" :key="religion.slug">
-                                    <span class="uk-label explorer-religion-label" :style="{ backgroundColor: religionColor(religion) }" x-text="'also ' + religion.name"></span>
+                                    <span class="uk-label explorer-religion-label" :style="{ backgroundColor: religionColor(religion) }" x-text="'also ' + membershipLabel(religion)"></span>
                                 </template>
                             </div>
                             <div class="uk-width-auto">

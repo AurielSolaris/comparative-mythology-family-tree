@@ -19,6 +19,7 @@ export const COLORS = {
     equivalent: '#1e87f0',
     cognate: '#32a852',
     analogue: '#8c8c8c',
+    polemic: '#b03a2e',
     syncretism: '#7c4dff',
     council: '#faa05a',
     coRuler: '#c8962e',
@@ -52,6 +53,8 @@ const KIND_LABELS: Record<Exclude<GraphEdge['kind'], 'parent'>, string> = {
     fission: 'split into',
     demonization: 'demonized as',
     deification: 'deified as',
+    name_derivation: 'gave its name to',
+    polemic: '⚔ polemic',
 };
 
 /**
@@ -944,7 +947,7 @@ export class TreeCanvas {
     }
 
     /**
-     * Equivalents as blue dots, cognates green, analogues grey; the other
+     * Equivalents as blue dots, cognates green, analogues grey, polemics red; the other
      * (directed) kinds as a dashed purple arc with an arrow at the result.
      * Hypotheses and disputed links are drawn fainter. Expects the line
      * width and alpha already set; returns label spots and the colour.
@@ -956,6 +959,7 @@ export class TreeCanvas {
             equivalent: COLORS.equivalent,
             cognate: COLORS.cognate,
             analogue: COLORS.analogue,
+            polemic: COLORS.polemic,
         };
         const color = colors[edge.kind] ?? COLORS.syncretism;
 

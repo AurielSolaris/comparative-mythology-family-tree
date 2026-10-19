@@ -218,4 +218,7 @@ The app is then available at http://localhost:8080.
 
 ## License
 
-Copyright © 2026 Debaditya Malakar. Released under the [GNU General Public License v3.0](LICENSE).
+Copyright © 2026 Debaditya Malakar.
+
+- **Code:** the [GNU General Public License v3.0](LICENSE).
+- **Data:** the dataset (religions, entities, relations and source references, including the JSON and SQLite exports) is under [Creative Commons Attribution 4.0](LICENSE-DATA) (CC BY 4.0). Reuse it freely, crediting “Comparative Mythology Family Tree by Debaditya Malakar” with a link to this repository. Short quotations of published works in the source references remain their authors'.

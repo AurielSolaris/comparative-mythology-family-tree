@@ -42,6 +42,9 @@ enum RelationRole: string
     case DemonizedFormOf = 'demonized_form_of';
     case DeifiedAs = 'deified_as';
     case DeificationOf = 'deification_of';
+    case NameSourceOf = 'name_source_of';
+    case NameDerivedFrom = 'name_derived_from';
+    case PolemicallyAssociatedWith = 'polemically_associated_with';
 
     public function kind(): RelationKind
     {
@@ -65,6 +68,8 @@ enum RelationRole: string
             self::SplitInto, self::SplitFrom => RelationKind::Fission,
             self::DemonizedAs, self::DemonizedFormOf => RelationKind::Demonization,
             self::DeifiedAs, self::DeificationOf => RelationKind::Deification,
+            self::NameSourceOf, self::NameDerivedFrom => RelationKind::NameDerivation,
+            self::PolemicallyAssociatedWith => RelationKind::Polemic,
         };
     }
 
@@ -79,6 +84,7 @@ enum RelationRole: string
             self::ParentOf, self::CouncilHeadOf,
             self::FusedInto, self::AbsorbedInto, self::HasAvatar, self::HasAspect, self::DevelopedInto,
             self::AdoptedAs, self::NameUsedFor, self::SupplantedBy, self::SplitInto, self::DemonizedAs, self::DeifiedAs,
+            self::NameSourceOf,
         ], true);
     }
 
@@ -114,6 +120,8 @@ enum RelationRole: string
             self::DemonizedFormOf => self::DemonizedAs,
             self::DeifiedAs => self::DeificationOf,
             self::DeificationOf => self::DeifiedAs,
+            self::NameSourceOf => self::NameDerivedFrom,
+            self::NameDerivedFrom => self::NameSourceOf,
             default => $this,
         };
     }
@@ -172,6 +180,9 @@ enum RelationRole: string
             self::DemonizedFormOf => 'Demonized form of',
             self::DeifiedAs => 'Deified as',
             self::DeificationOf => 'Deification of',
+            self::NameSourceOf => 'Gave its name to',
+            self::NameDerivedFrom => 'Name derived from',
+            self::PolemicallyAssociatedWith => 'Polemically associated with',
         };
     }
 

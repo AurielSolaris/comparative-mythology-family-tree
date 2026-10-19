@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\Classification;
 use App\Enums\Gender;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -50,6 +51,11 @@ class EntityRequest extends FormRequest
             ],
             'additional_religion_ids' => ['array'],
             'additional_religion_ids.*' => ['integer', 'distinct', Rule::exists('religions', 'id')],
+            'classification' => ['nullable', Rule::enum(Classification::class)],
+            'classification_term' => ['nullable', 'string', 'max:255'],
+            'memberships' => ['array'],
+            'memberships.*.classification' => ['nullable', Rule::enum(Classification::class)],
+            'memberships.*.term' => ['nullable', 'string', 'max:255'],
             'gender' => ['nullable', Rule::enum(Gender::class)],
             'element' => ['nullable', 'string', 'max:255'],
             'region' => ['nullable', 'string', 'max:255'],
@@ -57,6 +63,24 @@ class EntityRequest extends FormRequest
             'aliases' => ['nullable', 'array', 'max:50'],
             'aliases.*' => ['string', 'max:255', 'distinct:ignore_case'],
         ];
+    }
+
+    /**
+     * The additional religions with what the entity is in each, ready for
+     * sync(): [religion id => [classification, classification_term]].
+     *
+     * @return array<int, array{classification: ?string, classification_term: ?string}>
+     */
+    public function memberships(): array
+    {
+        $details = (array) $this->validated('memberships', []);
+
+        return collect($this->validated('additional_religion_ids'))
+            ->mapWithKeys(fn ($id) => [(int) $id => [
+                'classification' => $details[$id]['classification'] ?? null ?: null,
+                'classification_term' => $details[$id]['term'] ?? null ?: null,
+            ]])
+            ->all();
     }
 
     /**
@@ -78,6 +102,8 @@ class EntityRequest extends FormRequest
         return [
             'religion_id' => 'religion',
             'additional_religion_ids.*' => 'additional religion',
+            'memberships.*.classification' => 'classification',
+            'memberships.*.term' => 'term',
             'aliases.*' => 'alias',
         ];
     }
